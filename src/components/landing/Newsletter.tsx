@@ -3,8 +3,10 @@
 import React, { useState } from "react";
 import { Mail, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Newsletter() {
+  const { accessToken } = useAuth();
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -16,8 +18,9 @@ export default function Newsletter() {
     try {
       const res = await fetch("/api/newsletter", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        // A logged-in customer's subscription is linked to their account
+        headers: { "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+        body: JSON.stringify({ email, source: "home" }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {

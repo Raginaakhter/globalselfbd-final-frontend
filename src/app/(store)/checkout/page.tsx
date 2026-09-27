@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Banknote, CreditCard, Loader2, Lock, LogIn, MapPin, Smartphone, User } from "lucide-react";
@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import { ApiError, useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/shop";
-import { SHIPPING_INSIDE_DHAKA, SHIPPING_OUTSIDE_DHAKA } from "@/lib/storefront";
-import type { Order } from "@/lib/backend-types";
+import { useSite } from "@/context/SiteContext";
+import type { Order, ShippingSettings } from "@/lib/backend-types";
 import OrderSummary from "@/components/shop/OrderSummary";
 
 type Zone = "dhaka" | "outside";
@@ -63,6 +63,25 @@ export default function CheckoutPage() {
   const form: Form = { name: user?.name ?? "", phone: "", email: user?.email ?? "", address: "", city: "", area: "", note: "", ...edits };
   const [errors, setErrors] = useState<Errors>({});
   const [placing, setPlacing] = useState(false);
+  const { settings } = useSite();
+  const [quote, setQuote] = useState<{ key: string; charge: number } | null>(null);
+
+  // Exact charge for this city and subtotal from the backend (the same rule it uses when the order is placed).
+  const quoteCity = zone === "dhaka" ? "Dhaka" : form.city.trim();
+  const quoteKey = `${quoteCity}|${cart.subtotal}`;
+  useEffect(() => {
+    if (!quoteCity) return;
+    let cancelled = false;
+    const id = setTimeout(() => {
+      api<ShippingSettings>(`/public/shipping?city=${encodeURIComponent(quoteCity)}&subtotal=${cart.subtotal}`)
+        .then((res) => !cancelled && res.data.quote && setQuote({ key: quoteKey, charge: res.data.quote.charge }))
+        .catch(() => {});
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [api, quoteCity, quoteKey, cart.subtotal]);
 
   if (authLoading || !cart.hydrated) return <Skeleton />;
 
@@ -100,7 +119,8 @@ export default function CheckoutPage() {
     );
   }
 
-  const shipping = zone === "dhaka" ? SHIPPING_INSIDE_DHAKA : SHIPPING_OUTSIDE_DHAKA;
+  const rate = zone === "dhaka" ? settings.shippingInsideDhaka : settings.shippingOutsideDhaka;
+  const shipping = quote?.key === quoteKey ? quote.charge : rate;
   const available = cart.lines.filter((l) => l.isAvailable);
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
@@ -190,8 +210,8 @@ export default function CheckoutPage() {
             <div className="grid grid-cols-2 gap-3 mb-4">
               {(
                 [
-                  { v: "dhaka", t: "Inside Dhaka", s: `${formatPrice(SHIPPING_INSIDE_DHAKA)} · 1–2 days` },
-                  { v: "outside", t: "Outside Dhaka", s: `${formatPrice(SHIPPING_OUTSIDE_DHAKA)} · 2–4 days` },
+                  { v: "dhaka", t: "Inside Dhaka", s: `${formatPrice(settings.shippingInsideDhaka)} · 1–2 days` },
+                  { v: "outside", t: "Outside Dhaka", s: `${formatPrice(settings.shippingOutsideDhaka)} · 2–4 days` },
                 ] as const
               ).map((z) => (
                 <button

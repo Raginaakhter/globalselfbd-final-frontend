@@ -1,7 +1,7 @@
 // Server-side only: storefront data for server components, straight from the public backend API.
 
 import type { Pagination, StoreCategory, StoreProduct } from "@/lib/storefront";
-import { EMPTY_FOOTER, type Banner, type Brand, type FooterSettings } from "@/lib/backend-types";
+import { EMPTY_FOOTER, type Banner, type Brand, type FooterSettings, type ShippingSettings } from "@/lib/backend-types";
 import { callBackend } from "./backend";
 
 export async function fetchCategoryTree(): Promise<StoreCategory[]> {
@@ -56,4 +56,10 @@ export async function fetchFooter(): Promise<FooterSettings> {
     socialLinks: { ...EMPTY_FOOTER.socialLinks, ...data?.socialLinks },
     columns: data?.columns ?? [],
   };
+}
+
+/** Current delivery charges (GET /api/public/shipping); null when the backend is unreachable. */
+export async function fetchShipping(): Promise<ShippingSettings | null> {
+  const { body } = await callBackend<ShippingSettings>("/api/public/shipping");
+  return body.success && body.data ? body.data : null;
 }

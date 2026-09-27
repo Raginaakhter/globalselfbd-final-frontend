@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Send, CheckCircle2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 type Form = { name: string; email: string; phone: string; subject: string; message: string };
 type Errors = Partial<Record<keyof Form, string>>;
@@ -34,6 +35,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 }
 
 export default function ContactForm() {
+  const { accessToken } = useAuth();
   const [form, setForm] = useState<Form>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
   const [sending, setSending] = useState(false);
@@ -57,7 +59,8 @@ export default function ContactForm() {
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // A logged-in customer's message is linked to their account
+        headers: { "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
         body: JSON.stringify(form),
       });
       const data = await res.json();

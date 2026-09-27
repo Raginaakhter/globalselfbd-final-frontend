@@ -82,6 +82,27 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
           ))}
         </div>
       )}
+      {/* When each step happened (fields are null until that step is reached) */}
+      <div className={`${card} flex flex-wrap gap-x-6 gap-y-2 text-xs`}>
+        {(
+          [
+            ["Placed", o.createdAt],
+            ["Confirmed", o.confirmedAt],
+            ["Shipped", o.shippedAt],
+            ["Delivered", o.deliveredAt],
+            ["Cancelled", o.cancelledAt],
+            ["Paid", o.paidAt],
+            ["Refunded", o.refundedAt],
+          ] as const
+        )
+          .filter(([, at]) => at)
+          .map(([label, at]) => (
+            <div key={label}>
+              <span className="font-bold text-slate-500 uppercase">{label}</span>{" "}
+              <span className="font-semibold text-slate-800">{formatDateTime(at)}</span>
+            </div>
+          ))}
+      </div>
       {cancelled && o.cancelledAt && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">Cancelled on {formatDateTime(o.cancelledAt)}</div>
       )}
@@ -107,9 +128,9 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
               ))}
             </ul>
             <dl className="mt-4 space-y-1.5 border-t border-slate-100 pt-4 text-sm">
-              <Row label="Subtotal" value={formatBDT(o.subtotal)} />
+              <Row label="Products" value={formatBDT(o.subtotal)} />
               {o.discount > 0 && <Row label="Discount" value={`− ${formatBDT(o.discount)}`} />}
-              <Row label="Shipping" value={formatBDT(o.shippingCost)} />
+              <Row label="Delivery charge" value={formatBDT(o.shippingCost)} />
               <Row label="Total" value={formatBDT(o.totalAmount)} strong />
             </dl>
           </section>

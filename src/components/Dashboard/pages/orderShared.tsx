@@ -100,6 +100,8 @@ export function OrdersTable({
                 <th className="px-6 py-3.5">Order</th>
                 <th className="px-4 py-3.5">Customer</th>
                 <th className="px-4 py-3.5">Items</th>
+                <th className="px-4 py-3.5">Products</th>
+                <th className="px-4 py-3.5">Delivery</th>
                 <th className="px-4 py-3.5">Total</th>
                 <th className="px-4 py-3.5">Payment</th>
                 <th className="px-4 py-3.5">Status</th>
@@ -122,6 +124,11 @@ export function OrdersTable({
                   <td className="px-4 py-4 text-slate-600">
                     {o.itemCount} item{o.itemCount === 1 ? "" : "s"} · {o.totalQuantity} pcs
                   </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-slate-700">
+                    {formatBDT(o.subtotal)}
+                    {o.discount > 0 && <div className="text-[11px] text-rose-500">− {formatBDT(o.discount)} discount</div>}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-slate-700">{formatBDT(o.shippingCost)}</td>
                   <td className="px-4 py-4 font-extrabold whitespace-nowrap text-slate-900">{formatBDT(o.totalAmount)}</td>
                   <td className="px-4 py-4">
                     <div className="flex flex-col items-start gap-1">

@@ -41,9 +41,10 @@ export function flattenCategories(tree: StoreCategory[]): StoreCategory[] {
   return tree.flatMap((c) => [c, ...flattenCategories(c.children ?? [])]);
 }
 
-// Shipping as charged by the backend at checkout (city "Dhaka" vs anywhere else).
-export const SHIPPING_INSIDE_DHAKA = 60;
-export const SHIPPING_OUTSIDE_DHAKA = 120;
+// Fallback delivery charges, used only if GET /api/public/shipping cannot be reached.
+// The real values are managed in the dashboard (Delivery Charges) and read from the API.
+export const SHIPPING_INSIDE_DHAKA = 80;
+export const SHIPPING_OUTSIDE_DHAKA = 130;
 export const PRODUCT_SORTS = ["newest", "oldest", "price_asc", "price_desc", "title_asc"] as const;
 export type ProductSort = (typeof PRODUCT_SORTS)[number];
 

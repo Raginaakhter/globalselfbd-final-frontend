@@ -1,5 +1,6 @@
-// Static storefront copy with no backend API (trust badges, nav links, promo banner). Contact details and
-// footer columns here are only fallbacks: the Footer settings in the dashboard (GET /api/public/footer) win.
+// Static storefront copy with no backend API (trust badges, nav links, promo banner). Contact details come only
+// from the Footer settings in the dashboard (GET /api/public/footer); the footer link columns here are the default
+// until columns are set there.
 import type { SiteData } from "@/lib/site-types";
 import { SHIPPING_INSIDE_DHAKA, SHIPPING_OUTSIDE_DHAKA } from "@/lib/storefront";
 
@@ -7,18 +8,15 @@ export const SITE_CONTENT: Omit<SiteData, "categories" | "banners" | "promoCards
   settings: {
     siteName: "Global Shelf BD",
     tagline: "Your Trusted Global E-Commerce Store in Bangladesh",
-    email: "support@globalshelfbd.com",
-    phone: "+880 1712-345678",
-    whatsapp: "8801712345678",
-    address: "House 42, Road 11, Banani, Dhaka-1213, Bangladesh",
-    socials: [
-      { label: "Facebook", url: "https://facebook.com" },
-      { label: "Instagram", url: "https://instagram.com" },
-      { label: "WhatsApp", url: "https://wa.me/8801712345678" },
-    ],
-    topBarText: "🚚 Delivery ৳60 inside Dhaka · ৳120 nationwide · 100% Authentic Imported Products.",
+    // Contact details and social links come only from Dashboard → Footer; empty values are hidden.
+    email: "",
+    phone: "",
+    whatsapp: "",
+    address: "",
+    socials: [],
+    topBarText: "100% Authentic Imported Products.",
     complaintTitle: "Customer Care & Complaints",
-    complaintNote: "For any issue or complaint, call or WhatsApp us at +880 1712-345678 or email support@globalshelfbd.com",
+    complaintNote: "",
     shippingInsideDhaka: SHIPPING_INSIDE_DHAKA,
     shippingOutsideDhaka: SHIPPING_OUTSIDE_DHAKA,
   },
@@ -26,7 +24,6 @@ export const SITE_CONTENT: Omit<SiteData, "categories" | "banners" | "promoCards
     { title: "100% Authentic", body: "Directly imported from UK & USA official sources", emoji: "🛡️" },
     { title: "Fast Delivery", body: "1–2 days inside Dhaka, 2–4 days nationwide", emoji: "🚀" },
     { title: "Cash on Delivery", body: "Pay conveniently upon receiving your order", emoji: "💵" },
-    { title: "Easy Returns", body: "7-day hassle free replacement guarantee", emoji: "🔄" },
   ],
   navLinks: [
     { label: "Home", href: "/" },

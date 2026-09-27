@@ -1,4 +1,6 @@
 import {
+  History,
+  Truck,
   BadgeCheck,
   GalleryHorizontal,
   PanelBottom,
@@ -8,6 +10,7 @@ import {
   House,
   KeyRound,
   ListOrdered,
+  Mail,
   MessageSquare,
   Star,
   Ticket,
@@ -34,6 +37,9 @@ export type ModuleKey =
   | "banners"
   | "brands"
   | "footer"
+  | "shipping"
+  | "newsletter"
+  | "activity-logs"
   | "roles";
 
 export interface ModuleDef {
@@ -65,6 +71,9 @@ export const MODULES: ModuleDef[] = [
   { key: "banners", title: "Banners", path: `${BASE}/banners`, icon: GalleryHorizontal, section: "bottom", viewAny: ["banners.view"], editAny: ["banners.create", "banners.update", "banners.delete"] },
   { key: "brands", title: "Brands", path: `${BASE}/brands`, icon: BadgeCheck, section: "bottom", viewAny: ["brands.view"], editAny: ["brands.create", "brands.update", "brands.delete"] },
   { key: "footer", title: "Footer", path: `${BASE}/footer`, icon: PanelBottom, section: "bottom", viewAny: ["settings.view"], editAny: ["settings.update"] },
+  { key: "shipping", title: "Delivery Charges", path: `${BASE}/shipping`, icon: Truck, section: "bottom", viewAny: ["settings.view"], editAny: ["settings.update"] },
+  { key: "newsletter", title: "Newsletter", path: `${BASE}/newsletter`, icon: Mail, section: "bottom", viewAny: ["newsletter.view"], editAny: ["newsletter.send", "newsletter.delete"] },
+  { key: "activity-logs", title: "Activity Logs", path: `${BASE}/activity-logs`, icon: History, section: "bottom", viewAny: ["activityLogs.view"], editAny: [] },
   { key: "roles", title: "Roles & Permissions", path: `${BASE}/roles`, icon: KeyRound, section: "bottom", viewAny: ["roles.view"], editAny: ["roles.create", "roles.update", "roles.delete", "roles.status"] },
 ];
 

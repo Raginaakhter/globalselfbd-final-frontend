@@ -63,7 +63,7 @@ export default function OrderSummary({ lines, subtotal, shipping, discount = 0, 
         <div className="flex justify-between">
           <dt className="text-slate-600">Delivery</dt>
           <dd className="font-bold text-navy-700">
-            {shipping === undefined ? <span className="text-slate-500 font-medium">At checkout</span> : shipping === 0 ? <span className="text-brand-700">FREE</span> : formatPrice(shipping)}
+            {shipping === undefined ? <span className="text-slate-500 font-medium">At checkout</span> : formatPrice(shipping)}
           </dd>
         </div>
         <div className="flex justify-between items-baseline border-t border-slate-100 pt-3">

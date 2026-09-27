@@ -2,7 +2,7 @@ import { cache } from "react";
 import { SITE_CONTENT } from "@/lib/site-content";
 import { type SiteData, type SocialLink } from "@/lib/site-types";
 import { SOCIAL_NETWORKS } from "@/lib/backend-types";
-import { fetchBanners, fetchCategoryTree, fetchFeaturedBrands, fetchFooter } from "@/lib/server/storefront";
+import { fetchBanners, fetchCategoryTree, fetchFeaturedBrands, fetchFooter, fetchShipping } from "@/lib/server/storefront";
 
 const SOCIAL_LABELS: Record<string, string> = {
   facebook: "Facebook",
@@ -19,8 +19,16 @@ const SOCIAL_LABELS: Record<string, string> = {
  * Cached per request, so the layout and pages share one set of calls.
  */
 export const fetchSite = cache(async (): Promise<SiteData> => {
-  const [categories, banners, brands, footer] = await Promise.all([fetchCategoryTree(), fetchBanners(), fetchFeaturedBrands(), fetchFooter()]);
+  const [categories, banners, brands, footer, shipping] = await Promise.all([
+    fetchCategoryTree(),
+    fetchBanners(),
+    fetchFeaturedBrands(),
+    fetchFooter(),
+    fetchShipping(),
+  ]);
   const fallback = SITE_CONTENT.settings;
+  const insideDhaka = shipping?.insideDhaka ?? fallback.shippingInsideDhaka;
+  const outsideDhaka = shipping?.outsideDhaka ?? fallback.shippingOutsideDhaka;
 
   const socials: SocialLink[] = SOCIAL_NETWORKS.filter((k) => k !== "whatsapp" && footer.socialLinks[k]).map((k) => ({ label: SOCIAL_LABELS[k], url: footer.socialLinks[k] }));
   // The WhatsApp field holds a link or number; the footer builds its own wa.me link from the digits.
@@ -46,8 +54,20 @@ export const fetchSite = cache(async (): Promise<SiteData> => {
       email: footer.contact.email || fallback.email,
       phone: footer.contact.phone || fallback.phone,
       address: footer.contact.address || fallback.address,
+      // The complaint note is built from the real contact details, so it never shows a number that is not set.
+      complaintTitle: footer.contact.phone || footer.contact.email ? fallback.complaintTitle : "",
+      complaintNote: [
+        footer.contact.phone && `call or WhatsApp us at ${footer.contact.phone}`,
+        footer.contact.email && `email ${footer.contact.email}`,
+      ]
+        .filter(Boolean)
+        .join(" or ")
+        .replace(/^./, (c) => `For any issue or complaint, ${c}`),
       socials: hasOwnSocials ? socials : fallback.socials,
       whatsapp: hasOwnSocials ? whatsapp : fallback.whatsapp,
+      topBarText: `🚚 Delivery ৳${insideDhaka} inside Dhaka · ৳${outsideDhaka} nationwide · ${fallback.topBarText}`,
+      shippingInsideDhaka: insideDhaka,
+      shippingOutsideDhaka: outsideDhaka,
     },
     categories,
     banners: banners.filter((b) => b.placement !== "PROMO"),

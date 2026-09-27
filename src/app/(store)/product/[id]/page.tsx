@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, CircleX, RotateCcw, ShieldCheck, Truck } from "lucide-react";
+import { CheckCircle2, CircleX, ShieldCheck, Truck } from "lucide-react";
 import { fetchSite } from "@/lib/site-fetch";
 import ProductSection from "@/components/landing/ProductSection";
 import PurchasePanel from "@/components/shop/PurchasePanel";
@@ -42,7 +42,6 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
     { icon: Truck, t: "Fast delivery", s: `${formatPrice(settings.shippingInsideDhaka)} inside Dhaka` },
     ...[
       { icon: ShieldCheck, badge: trustBadges.find((b) => /authentic/i.test(b.title)) },
-      { icon: RotateCcw, badge: trustBadges.find((b) => /return/i.test(b.title)) },
     ].flatMap(({ icon, badge }) => (badge ? [{ icon, t: badge.title, s: badge.body }] : [])),
   ];
 
@@ -94,7 +93,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               <PurchasePanel product={product} />
             </div>
 
-            <ul className="mt-6 grid sm:grid-cols-3 gap-3 text-xs">
+            <ul className="mt-6 grid sm:grid-cols-2 gap-3 text-xs">
               {assurances.map(({ icon: Icon, t, s }) => (
                 <li key={t} className="flex items-center gap-2.5 rounded-2xl bg-brand-50 border border-brand-100 p-3">
                   <Icon className="w-5 h-5 text-brand-700 shrink-0" />

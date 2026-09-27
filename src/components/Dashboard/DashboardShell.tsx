@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Eye, Loader2, PanelLeft, ShieldX } from "lucide-react";
+import { Loader2, PanelLeft, ShieldX } from "lucide-react";
 import AppSidebar from "./AppSidebar";
 import { useDashboardAccess } from "./store/AdminStore";
 import { MODULES, moduleForPath, requiresEdit } from "./store/permissions";
@@ -48,17 +48,8 @@ function PermissionGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return (
-    <>
-      {level === "view" && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-xs font-semibold text-sky-800">
-          <Eye className="h-4 w-4 shrink-0" />
-          View-only access: your role can see {mod.title} but cannot make changes.
-        </div>
-      )}
-      {children}
-    </>
-  );
+  // Pages hide the actions a role cannot take, so no separate view-only notice is shown.
+  return <>{children}</>;
 }
 
 /** The dashboard is for staff. Customers (empty backend menu) go to their own orders on the storefront. */

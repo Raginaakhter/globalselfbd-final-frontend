@@ -8,7 +8,7 @@ export default function TrustBar() {
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 rounded-3xl bg-white border border-slate-200 shadow-sm p-4 sm:p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 rounded-3xl bg-white border border-slate-200 shadow-sm p-4 sm:p-5">
         {trustBadges.map((b) => (
           <div key={b.title} className="flex items-center gap-3">
             <span className="w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center text-xl sm:text-2xl">

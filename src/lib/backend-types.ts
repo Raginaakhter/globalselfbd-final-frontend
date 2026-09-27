@@ -96,6 +96,12 @@ export interface Order {
   orderStatus: OrderStatus;
   shippingInformation: ShippingInformation;
   cancelledAt: string | null;
+  /** Set when the order reaches that step; null until then. */
+  confirmedAt?: string | null;
+  shippedAt?: string | null;
+  deliveredAt?: string | null;
+  paidAt?: string | null;
+  refundedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,6 +121,11 @@ export interface AdminOrderListItem {
   customerEmail: string | null;
   itemCount: number;
   totalQuantity: number;
+  /** Product price before discount */
+  subtotal: number;
+  discount: number;
+  /** Delivery charge */
+  shippingCost: number;
   totalAmount: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
@@ -148,6 +159,9 @@ export interface BackendUser {
   email: string;
   role: RoleRef | null;
   status: Status;
+  /** Empty string when not set. */
+  phone?: string;
+  avatarUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -271,16 +285,28 @@ export interface PaymentPeriod {
   label: string;
   from: string;
   to: string;
-  received: { amount: number; orders: number };
-  refunded: { amount: number; orders: number };
+  received: PaymentTotals;
+  refunded: PaymentTotals;
   net: number;
+  netSplit: MoneySplit;
+}
+
+/** Product money (after discount) is the company's; the delivery charge goes to the delivery company. */
+export interface MoneySplit {
+  productAmount: number;
+  shippingCost: number;
+}
+
+export interface PaymentTotals extends MoneySplit {
+  amount: number;
+  orders: number;
 }
 
 export interface PaymentsReport {
   currency: string;
   timezone: string;
   periods: PaymentPeriod[];
-  outstanding: { amount: number; orders: number; byPaymentMethod: { paymentMethod: PaymentMethod; orders: number; amount: number }[] };
+  outstanding: MoneySplit & { amount: number; orders: number; byPaymentMethod: { paymentMethod: PaymentMethod; orders: number; amount: number }[] };
 }
 
 export interface SalesPeriod {
@@ -300,7 +326,7 @@ export interface SalesReport {
   timezone: string;
   basis: string;
   periods: SalesPeriod[];
-  ordersByStatus: Record<OrderStatus, { orders: number; amount: number }>;
+  ordersByStatus: Record<OrderStatus, MoneySplit & { orders: number; amount: number }>;
 }
 
 export type SalesChartRange = "7d" | "14d" | "30d" | "6m" | "1y";
@@ -309,6 +335,143 @@ export interface SalesChart {
   range: SalesChartRange;
   groupBy: "day" | "month";
   currency: string;
-  total: { amount: number; orders: number };
-  points: { label: string; amount: number; orders: number }[];
+  total: MoneySplit & { amount: number; orders: number };
+  points: (MoneySplit & { label: string; amount: number; orders: number })[];
+}
+
+/* ---------- Delivery charges ---------- */
+
+export interface ShippingSettings {
+  currency: string;
+  insideDhaka: number;
+  outsideDhaka: number;
+  /** Backend free-delivery threshold (0 = off). Not shown on the website. */
+  freeShippingMinimum: number;
+  rule: string;
+  /** Only with ?city= on GET /api/public/shipping: the exact charge the order will use. */
+  quote?: { city: string; area: "INSIDE_DHAKA" | "OUTSIDE_DHAKA"; subtotal: number; charge: number };
+}
+
+/* ---------- Newsletter ---------- */
+
+export type SubscriberStatus = "SUBSCRIBED" | "UNSUBSCRIBED";
+
+export interface NewsletterSubscriber {
+  _id: string;
+  email: string;
+  status: SubscriberStatus;
+  source: string;
+  userId: string | null;
+  subscribedAt: string;
+  unsubscribedAt: string | null;
+  createdAt: string;
+}
+
+export interface SubscriberSummary {
+  subscribed: number;
+  unsubscribed: number;
+  total: number;
+}
+
+export type CampaignType = "NEW_PRODUCT" | "OFFER" | "ANNOUNCEMENT";
+export type CampaignStatus = "DRAFT" | "SENDING" | "SENT" | "FAILED";
+
+export interface CampaignProduct {
+  _id: string;
+  productTitle: string;
+  slug: string;
+  thumbnail: string;
+  customerSellPrice: number;
+  customerSpecialPrice: number | null;
+  status: Status;
+}
+
+export interface NewsletterCampaign {
+  _id: string;
+  type: CampaignType;
+  subject: string;
+  heading: string;
+  message: string;
+  productIds: string[];
+  /** Included on create/get/update, not in the list */
+  products?: CampaignProduct[];
+  buttonText: string;
+  buttonLink: string;
+  status: CampaignStatus;
+  recipients: number;
+  sentCount: number;
+  failedCount: number;
+  sentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignPreview {
+  subject: string;
+  html: string;
+  text: string;
+  products: number;
+}
+
+/* ---------- Activity logs ---------- */
+
+export const ACTIVITY_ACTIONS = [
+  "ROLE_CREATED",
+  "ROLE_UPDATED",
+  "ROLE_DELETED",
+  "ROLE_STATUS_CHANGED",
+  "USER_ROLE_CHANGED",
+  "USER_CREATED",
+  "USER_UPDATED",
+  "USER_DELETED",
+  "USER_STATUS_CHANGED",
+  "PERMISSION_ASSIGNED",
+  "PERMISSION_REMOVED",
+  "ORDER_CREATED",
+  "ORDER_CONFIRMED",
+  "ORDER_PROCESSING",
+  "ORDER_SHIPPED",
+  "ORDER_DELIVERED",
+  "ORDER_CANCELLED",
+  "PAYMENT_STATUS_CHANGED",
+] as const;
+export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];
+
+export interface ActivityLog {
+  _id: string;
+  actorUserId: { _id: string; fullName: string; email: string } | null;
+  action: ActivityAction | string;
+  /** Populated targets; null when the target was deleted, absent when not relevant. */
+  targetUserId?: { _id: string; fullName: string; email: string } | null;
+  targetRoleId?: { _id: string; name: string } | null;
+  targetOrderId?: { _id: string; orderNumber: string } | null;
+  oldValue?: unknown;
+  newValue?: unknown;
+  ip?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+/* ---------- Contact messages ---------- */
+
+export type ContactStatus = "NEW" | "READ" | "REPLIED";
+
+export interface ContactMessage {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+  status: ContactStatus;
+  userId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContactSummary {
+  new: number;
+  read: number;
+  replied: number;
+  total: number;
 }

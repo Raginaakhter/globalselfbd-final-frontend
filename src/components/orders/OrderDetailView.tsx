@@ -88,7 +88,7 @@ export default function OrderDetailView({ order, children }: { order: Order; chi
           )}
           <div className="flex justify-between">
             <dt className="text-slate-600">Delivery</dt>
-            <dd className="font-bold">{order.shippingCost === 0 ? "FREE" : formatPrice(order.shippingCost)}</dd>
+            <dd className="font-bold">{formatPrice(order.shippingCost)}</dd>
           </div>
           <div className="flex justify-between items-baseline pt-2">
             <dt className="font-black text-blue-950">
