@@ -148,7 +148,7 @@ export function useConfirm() {
 export function Toggle({
   checked,
   onChange,
-  color = "peer-checked:bg-emerald-600",
+  color = "peer-checked:bg-blue-800",
   size = "sm",
 }: {
   checked: boolean;
@@ -182,7 +182,7 @@ export function PrimaryButton({
     <button
       {...props}
       disabled={props.disabled || loading}
-      className={`inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border border-[#22c55e] bg-[#22c55e] px-5 text-sm font-bold whitespace-nowrap text-white shadow-md transition hover:shadow-lg hover:brightness-95 active:scale-98 disabled:pointer-events-none disabled:opacity-50 ${className}`}
+      className={`inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border border-blue-800 bg-blue-800 px-5 text-sm font-bold whitespace-nowrap text-white shadow-md transition hover:shadow-lg hover:brightness-95 active:scale-98 disabled:pointer-events-none disabled:opacity-50 ${className}`}
     >
       {loading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
       {children}
@@ -193,14 +193,14 @@ export function PrimaryButton({
 export function Spinner({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center gap-3 p-12 text-center text-xs text-slate-400">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-800 border-t-transparent" />
       {label}
     </div>
   );
 }
 
 export const inputClass =
-  "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition";
+  "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 transition";
 
 export const labelClass = "text-xs font-bold text-slate-700";
 
@@ -234,14 +234,14 @@ export function SearchBox({ value, onChange, placeholder }: { value: string; onC
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pr-4 pl-10 text-xs font-medium text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pr-4 pl-10 text-xs font-medium text-slate-900 focus:ring-2 focus:ring-blue-600 focus:outline-none"
       />
     </div>
   );
 }
 
 export const selectClass =
-  "rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none";
+  "rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-600 focus:outline-none";
 
 export function Pager({
   pagination,
@@ -316,6 +316,9 @@ const PILL_STYLES: Record<string, string> = {
   NEW: "bg-sky-50 text-sky-700 border-sky-200",
   READ: "bg-slate-100 text-slate-600 border-slate-200",
   REPLIED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  SCHEDULED: "bg-sky-50 text-sky-700 border-sky-200",
+  EXPIRED: "bg-rose-50 text-rose-700 border-rose-200",
+  USED_UP: "bg-orange-50 text-orange-700 border-orange-200",
 };
 
 export function StatusPill({ value }: { value: string }) {

@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/orders/StatusTimeline";
 import ProductImage from "@/components/shop/ProductImage";
 import { PAYMENT_METHOD_LABELS, type Order } from "@/lib/backend-types";
 
-const CONFETTI = ["#22c55e", "#16a34a", "#fbbf24", "#1e3a6e", "#f43f5e", "#34d399", "#f59e0b"];
+const CONFETTI = ["#155dfc", "#193cb8", "#fbbf24", "#1e3a6e", "#f43f5e", "#51a2ff", "#f59e0b"];
 
 function Confetti() {
   // Deterministic pseudo-random layout keeps server and client markup identical.
@@ -48,8 +48,8 @@ function SuccessCheck() {
       <span className="absolute inset-0 rounded-full bg-brand-400/30 success-ring" />
       <span className="absolute inset-0 rounded-full bg-brand-400/20 success-ring [animation-delay:0.35s]" />
       <svg viewBox="0 0 120 120" className="relative w-32 h-32 success-pop" role="img" aria-label="Order placed successfully">
-        <circle cx="60" cy="60" r="54" fill="#f0fdf4" stroke="#16a34a" strokeWidth="6" strokeLinecap="round" className="success-circle" />
-        <path d="M36 62 L54 80 L86 42" fill="none" stroke="#16a34a" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" className="success-tick" />
+        <circle cx="60" cy="60" r="54" fill="#eff6ff" stroke="#193cb8" strokeWidth="6" strokeLinecap="round" className="success-circle" />
+        <path d="M36 62 L54 80 L86 42" fill="none" stroke="#193cb8" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" className="success-tick" />
       </svg>
     </div>
   );

@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/shop";
 import { useSite } from "@/context/SiteContext";
 import type { Order, ShippingSettings } from "@/lib/backend-types";
 import OrderSummary from "@/components/shop/OrderSummary";
+import CouponBox, { type AppliedCoupon } from "@/components/shop/CouponBox";
 
 type Zone = "dhaka" | "outside";
 type Form = { name: string; phone: string; email: string; address: string; city: string; area: string; note: string };
@@ -65,15 +66,18 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const { settings } = useSite();
   const [quote, setQuote] = useState<{ key: string; charge: number } | null>(null);
+  // Coupon checked by the backend for this cart subtotal
+  const [coupon, setCoupon] = useState<(AppliedCoupon & { subtotal: number }) | null>(null);
+  const discount = coupon?.discount ?? 0;
 
   // Exact charge for this city and subtotal from the backend (the same rule it uses when the order is placed).
   const quoteCity = zone === "dhaka" ? "Dhaka" : form.city.trim();
-  const quoteKey = `${quoteCity}|${cart.subtotal}`;
+  const quoteKey = `${quoteCity}|${cart.subtotal - discount}`;
   useEffect(() => {
     if (!quoteCity) return;
     let cancelled = false;
     const id = setTimeout(() => {
-      api<ShippingSettings>(`/public/shipping?city=${encodeURIComponent(quoteCity)}&subtotal=${cart.subtotal}`)
+      api<ShippingSettings>(`/public/shipping?city=${encodeURIComponent(quoteCity)}&subtotal=${cart.subtotal - discount}`)
         .then((res) => !cancelled && res.data.quote && setQuote({ key: quoteKey, charge: res.data.quote.charge }))
         .catch(() => {});
     }, 300);
@@ -81,7 +85,34 @@ export default function CheckoutPage() {
       cancelled = true;
       clearTimeout(id);
     };
-  }, [api, quoteCity, quoteKey, cart.subtotal]);
+  }, [api, quoteCity, quoteKey, cart.subtotal, discount]);
+
+  const checkCoupon = async (code: string): Promise<string | null> => {
+    try {
+      const res = await api<{ code: string; discount: number; description: string }>("/coupons/apply", { method: "POST", body: JSON.stringify({ code }) });
+      setCoupon({ code: res.data.code, discount: res.data.discount, description: res.data.description, subtotal: cart.subtotal });
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not check the coupon. Please try again.";
+    }
+  };
+
+  // The cart changed after the coupon was applied: check it again for the new items
+  const couponCode = coupon?.code;
+  const couponStale = coupon !== null && coupon.subtotal !== cart.subtotal;
+  useEffect(() => {
+    if (!couponStale || !couponCode) return;
+    const id = setTimeout(() => {
+      void checkCoupon(couponCode).then((message) => {
+        if (message) {
+          setCoupon(null);
+          toast.error(`Coupon removed: ${message}`);
+        }
+      });
+    }, 300);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [couponStale, couponCode, cart.subtotal]);
 
   if (authLoading || !cart.hydrated) return <Skeleton />;
 
@@ -154,6 +185,7 @@ export default function CheckoutPage() {
           area: form.area.trim(),
           orderNotes: form.note.trim() || undefined,
           paymentMethod: "CASH_ON_DELIVERY",
+          couponCode: coupon?.code,
         }),
       });
       // The backend empties the cart when the order is created.
@@ -210,8 +242,8 @@ export default function CheckoutPage() {
             <div className="grid grid-cols-2 gap-3 mb-4">
               {(
                 [
-                  { v: "dhaka", t: "Inside Dhaka", s: `${formatPrice(settings.shippingInsideDhaka)} · 1–2 days` },
-                  { v: "outside", t: "Outside Dhaka", s: `${formatPrice(settings.shippingOutsideDhaka)} · 2–4 days` },
+                  { v: "dhaka", t: "Inside Dhaka", s: `${formatPrice(settings.shippingInsideDhaka)} · 1–3 days` },
+                  { v: "outside", t: "Outside Dhaka", s: `${formatPrice(settings.shippingOutsideDhaka)} · 3–5 days` },
                 ] as const
               ).map((z) => (
                 <button
@@ -285,10 +317,12 @@ export default function CheckoutPage() {
             lines={available.map((l) => ({ key: l.key, title: l.title, thumbnail: l.thumbnail, quantity: l.quantity, subtotal: l.subtotal, size: l.size, slug: l.slug }))}
             subtotal={cart.subtotal}
             shipping={shipping}
+            discount={discount}
           >
+            <CouponBox applied={coupon} onApply={checkCoupon} onRemove={() => setCoupon(null)} disabled={placing} />
             <button
               type="submit"
-              disabled={placing || cart.loading}
+              disabled={placing || cart.loading || couponStale}
               className="mt-5 w-full py-4 rounded-full text-sm font-black text-white btn-primary-gradient flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {placing ? (
@@ -297,7 +331,7 @@ export default function CheckoutPage() {
                 </>
               ) : (
                 <>
-                  <Lock className="w-4 h-4" /> Place Order — {formatPrice(cart.subtotal + shipping)}
+                  <Lock className="w-4 h-4" /> Place Order — {formatPrice(cart.subtotal - discount + shipping)}
                 </>
               )}
             </button>

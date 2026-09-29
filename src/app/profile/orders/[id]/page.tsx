@@ -8,7 +8,7 @@ import AccountHeader from "@/components/account/AccountHeader";
 import OrderDetailView from "@/components/orders/OrderDetailView";
 import type { Order } from "@/lib/backend-types";
 import { CUSTOMER_CANCELLABLE } from "@/lib/order-status";
-import { ArrowLeft, Loader2, PackageX, XCircle } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, PackageX, XCircle } from "lucide-react";
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -50,7 +50,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const canCancel = order && CUSTOMER_CANCELLABLE.includes(order.orderStatus) && hasPermission("orders.create");
+  // The backend sends canCancel; older responses fall back to the known cancellable statuses
+  const canCancel = order && (order.canCancel ?? CUSTOMER_CANCELLABLE.includes(order.orderStatus)) && hasPermission("orders.create");
+  // Invoices exist once the order is confirmed, and never for cancelled orders
+  const hasInvoice = order && order.orderStatus !== "PENDING" && order.orderStatus !== "CANCELLED";
 
   return (
     <div className="min-h-screen bg-mesh-light bg-dot-pattern flex flex-col">
@@ -79,6 +82,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {order && (
           <OrderDetailView order={order}>
+            {hasInvoice && (
+              <Link
+                href={`/profile/orders/${order._id}/invoice`}
+                className="w-full py-3 rounded-full border-2 border-cyan-200 text-sm font-bold text-cyan-700 hover:bg-cyan-50 flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" /> View invoice
+              </Link>
+            )}
             {canCancel && (
               <button
                 type="button"

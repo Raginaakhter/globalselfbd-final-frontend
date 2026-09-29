@@ -11,7 +11,7 @@ import type { AccessLevel, ModuleKey } from "./store/permissions";
 const quickActions: { label: string; href: string; icon: typeof CirclePlus; className: string; module: ModuleKey; needs: AccessLevel }[] = [
   { label: "+ Add Product", href: `${BASE}/products/add`, icon: CirclePlus, className: "bg-blue-600 hover:bg-blue-700", module: "products", needs: "edit" },
   { label: "+ Add Category", href: `${BASE}/categories`, icon: FolderPlus, className: "bg-violet-600 hover:bg-violet-700", module: "categories", needs: "edit" },
-  { label: "View Orders", href: `${BASE}/orders`, icon: ShoppingBag, className: "bg-emerald-600 hover:bg-emerald-700", module: "orders", needs: "view" },
+  { label: "View Orders", href: `${BASE}/orders`, icon: ShoppingBag, className: "bg-blue-800 hover:bg-blue-900", module: "orders", needs: "view" },
   ];
 
 interface Props {

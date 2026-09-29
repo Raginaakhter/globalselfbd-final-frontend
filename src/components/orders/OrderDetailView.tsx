@@ -82,7 +82,7 @@ export default function OrderDetailView({ order, children }: { order: Order; chi
           </div>
           {order.discount > 0 && (
             <div className="flex justify-between">
-              <dt className="text-slate-600">Discount</dt>
+              <dt className="text-slate-600">Discount{order.couponCode ? ` (${order.couponCode})` : ""}</dt>
               <dd className="font-bold">− {formatPrice(order.discount)}</dd>
             </div>
           )}
@@ -96,6 +96,12 @@ export default function OrderDetailView({ order, children }: { order: Order; chi
             </dt>
             <dd className="text-xl font-black text-blue-900">{formatPrice(order.totalAmount)}</dd>
           </div>
+          {order.paymentStatus === "REFUNDED" && (
+            <div className="flex justify-between rounded-xl bg-emerald-50 px-3 py-2 text-emerald-800">
+              <dt className="font-semibold">Refunded (product price; delivery charge is not refundable)</dt>
+              <dd className="font-black">{formatPrice(order.refundAmount || order.subtotal - order.discount)}</dd>
+            </div>
+          )}
         </dl>
 
         {children}

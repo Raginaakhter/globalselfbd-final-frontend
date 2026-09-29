@@ -34,6 +34,8 @@ export default function SalesOverview() {
   const data = report.data;
   const period = data?.periods.find((p) => p.key === periodKey) ?? data?.periods[0];
   const card = "rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs";
+  const refunded = period?.refundedOrders ?? 0;
+  const refundNote = refunded > 0 ? ` · ${plural(refunded, "refunded order")} not counted` : "";
 
   // Only the product price (after discount) is the company's income; the shipping charge is handed to the shipping company.
   const splitCards = [
@@ -43,19 +45,19 @@ export default function SalesOverview() {
       value: period ? period.productSales - period.discount : null,
       sub:
         period && period.discount > 0
-          ? `Products ${formatBDT(period.productSales)} − discount ${formatBDT(period.discount)}`
+          ? `Products ${formatBDT(period.productSales)} − discount ${formatBDT(period.discount)}${refundNote}`
           : period
-            ? `Product price of ${plural(period.orders, "delivered order")}`
+            ? `Product price of ${plural(period.orders - refunded, "delivered order")}${refundNote}`
             : "",
       icon: Package,
-      tone: "bg-emerald-50 text-emerald-600",
-      border: "border-emerald-200",
+      tone: "bg-blue-50 text-blue-700",
+      border: "border-blue-200",
     },
     {
       title: "Shipping charges",
       note: "Give to the shipping company",
       value: period?.shippingCost ?? null,
-      sub: "Not your income",
+      sub: refunded > 0 ? `Not your income · includes ${plural(refunded, "refunded order")}` : "Not your income",
       icon: Truck,
       tone: "bg-amber-50 text-amber-600",
       border: "border-amber-200",
@@ -68,7 +70,7 @@ export default function SalesOverview() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-extrabold tracking-wide text-slate-700 uppercase">Sales</h2>
-            <p className="text-xs text-slate-500">Delivered orders, refunds excluded. Product price and shipping are shown separately.</p>
+            <p className="text-xs text-slate-500">Delivered orders. A refunded order counts its shipping charge only (the product price was given back).</p>
           </div>
           <select className={selectClass} value={periodKey} onChange={(e) => setPeriodKey(e.target.value as ReportPeriodKey)} disabled={!data}>
             {(data?.periods ?? []).map((p) => (
@@ -99,7 +101,13 @@ export default function SalesOverview() {
             ))}
           </div>
         )}
-        {period && <p className="text-[11px] text-slate-400">Customers paid {formatBDT(period.amount)} in total (product price + shipping).</p>}
+        {period && (
+          <p className="text-[11px] text-slate-400">
+            {refunded > 0
+              ? `Kept ${formatBDT(period.amount)} in total after refunds (product price + shipping).`
+              : `Customers paid ${formatBDT(period.amount)} in total (product price + shipping).`}
+          </p>
+        )}
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -135,7 +143,7 @@ export default function SalesOverview() {
               <h2 className="text-sm font-extrabold tracking-wide text-slate-700 uppercase">Sales chart</h2>
               {chart.data && (
                 <p className="text-xs text-slate-500">
-                  <span className="font-bold text-emerald-700">{formatBDT(chart.data.total.productAmount)} product sales</span> ·{" "}
+                  <span className="font-bold text-blue-800">{formatBDT(chart.data.total.productAmount)} product sales</span> ·{" "}
                   <span className="font-bold text-amber-600">{formatBDT(chart.data.total.shippingCost)} shipping</span> · {plural(chart.data.total.orders, "order")}
                 </p>
               )}
@@ -162,8 +170,8 @@ export default function SalesOverview() {
                 <AreaChart data={chart.data.points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#059669" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="#059669" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#193cb8" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#193cb8" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="shippingFill" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#d97706" stopOpacity={0.2} />
@@ -184,7 +192,7 @@ export default function SalesOverview() {
                     labelFormatter={(l) => axisLabel(String(l), chart.data!.groupBy)}
                     formatter={(v, name) => [formatBDT(Number(v)), name === "productAmount" ? "Product sales" : "Shipping"]}
                   />
-                  <Area type="monotone" dataKey="productAmount" stroke="#059669" strokeWidth={2} fill="url(#salesFill)" />
+                  <Area type="monotone" dataKey="productAmount" stroke="#193cb8" strokeWidth={2} fill="url(#salesFill)" />
                   <Area type="monotone" dataKey="shippingCost" stroke="#d97706" strokeWidth={2} fill="url(#shippingFill)" />
                 </AreaChart>
               </ResponsiveContainer>

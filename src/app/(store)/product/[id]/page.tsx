@@ -6,6 +6,8 @@ import { fetchSite } from "@/lib/site-fetch";
 import ProductSection from "@/components/landing/ProductSection";
 import PurchasePanel from "@/components/shop/PurchasePanel";
 import ProductGallery from "@/components/shop/ProductGallery";
+import ProductReviews from "@/components/reviews/ProductReviews";
+import Stars from "@/components/reviews/Stars";
 import { fetchProduct, fetchProducts } from "@/lib/server/storefront";
 import { packLabel } from "@/lib/storefront";
 import { formatPrice } from "@/lib/shop";
@@ -69,6 +71,13 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
             {category && <p className="text-xs font-black uppercase tracking-widest text-brand-700">{category.name}</p>}
             <h1 className="text-2xl sm:text-3xl font-black text-navy-700 tracking-tight leading-tight mt-1.5">{product.productTitle}</h1>
             {pack && <p className="text-sm text-slate-500 mt-1">{pack}</p>}
+            {!!product.rating?.totalReviews && (
+              <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-sm text-slate-600 hover:text-brand-700 w-fit">
+                <Stars value={product.rating.averageRating} />
+                <span className="font-bold text-navy-700">{product.rating.averageRating.toFixed(1)}</span>
+                <span>({product.rating.totalReviews} review{product.rating.totalReviews === 1 ? "" : "s"})</span>
+              </a>
+            )}
 
             <div className="mt-5 flex flex-wrap items-baseline gap-3">
               <span className="text-4xl font-black text-brand-700">{formatPrice(product.finalPrice)}</span>
@@ -124,6 +133,8 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
             ))}
           </dl>
         </section>
+
+        <ProductReviews productId={product._id} slug={product.slug} />
       </div>
 
       <ProductSection id="related" title="You May Also Like" bn="আপনার পছন্দ হতে পারে" products={related} href={category ? `/shop?category=${category.slug}` : "/shop"} />

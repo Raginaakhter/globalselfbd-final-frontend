@@ -383,13 +383,13 @@ function ProductPicker({ exclude, onPick }: { exclude: string[]; onPick: (p: Cam
               type="button"
               key={p._id}
               onClick={() => onPick({ _id: p._id, productTitle: p.productTitle, slug: p.slug, thumbnail: p.thumbnail, customerSellPrice: p.customerSellPrice, customerSpecialPrice: p.customerSpecialPrice, status: p.status })}
-              className="flex cursor-pointer items-center gap-2 rounded-lg p-1.5 text-left hover:bg-emerald-50"
+              className="flex cursor-pointer items-center gap-2 rounded-lg p-1.5 text-left hover:bg-blue-50"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p.thumbnail} alt="" className="h-8 w-8 shrink-0 rounded-md object-cover" />
               <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">{p.productTitle}</span>
               <span className="text-[11px] text-slate-500">{formatTaka(p.finalPrice)}</span>
-              <Plus className="h-4 w-4 text-emerald-600" />
+              <Plus className="h-4 w-4 text-blue-700" />
             </button>
           ))
         )}

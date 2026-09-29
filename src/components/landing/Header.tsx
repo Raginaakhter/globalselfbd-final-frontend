@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -18,6 +18,12 @@ export default function Header() {
   const [catOpen, setCatOpen] = useState(false);
   const [query, setQuery] = useState("");
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
+  // Active on its own page and on pages under it ("/shop" stays active on "/shop?q=...").
+  const isActive = (href: string) => {
+    const path = href.split("?")[0];
+    return path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`);
+  };
   const { count, openDrawer } = useCart();
   const { count: wishlistCount } = useWishlist();
 
@@ -125,7 +131,7 @@ export default function Header() {
             className="relative p-2.5 rounded-full bg-blue-900 text-white hover:bg-blue-800 transition-colors cursor-pointer shadow-sm"
           >
             <ShoppingCart className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-emerald-400 text-blue-950 text-[11px] font-black flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-sun-400 text-blue-950 text-[11px] font-black flex items-center justify-center">
               {count > 99 ? "99+" : count}
             </span>
           </button>
@@ -169,10 +175,22 @@ export default function Header() {
             <Link
               key={l.label}
               href={l.href}
-              className={`px-4 h-11 flex items-center text-sm font-semibold transition-colors ${
-                l.hot ? "text-rose-500 hover:text-rose-600" : "text-slate-700 hover:text-blue-900"
+              aria-current={isActive(l.href) ? "page" : undefined}
+              className={`group relative px-4 h-11 flex items-center text-sm font-semibold transition-colors duration-200 ${
+                isActive(l.href)
+                  ? "text-blue-900 bg-blue-50"
+                  : l.hot
+                    ? "text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                    : "text-slate-700 hover:text-blue-900 hover:bg-blue-50/70"
               }`}
             >
+              {/* Underline: full width on the active page, grows in on hover */}
+              <span
+                aria-hidden="true"
+                className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-blue-900 transition-transform duration-300 ${
+                  isActive(l.href) ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                }`}
+              />
               {l.hot && <span className="mr-1.5">🔥</span>}
               {l.label}
             </Link>
@@ -193,7 +211,15 @@ export default function Header() {
           </div>
           <div className="px-4 pb-4 flex flex-col">
             {navLinks.map((l) => (
-              <Link key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="py-2.5 text-sm font-semibold text-navy-700 border-t border-slate-100">
+              <Link
+                key={l.label}
+                href={l.href}
+                onClick={() => setMenuOpen(false)}
+                aria-current={isActive(l.href) ? "page" : undefined}
+                className={`py-2.5 px-3 text-sm font-semibold border-t border-slate-100 transition-colors ${
+                  isActive(l.href) ? "text-blue-900 bg-blue-50 border-l-4 border-l-blue-900" : "text-navy-700 hover:text-blue-900 hover:bg-blue-50/70"
+                }`}
+              >
                 {l.label}
               </Link>
             ))}

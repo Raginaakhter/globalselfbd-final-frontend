@@ -134,6 +134,8 @@ export function OrdersTable({
                     <div className="flex flex-col items-start gap-1">
                       <StatusPill value={o.paymentStatus} />
                       <span className="text-slate-400">{PAYMENT_METHOD_LABELS[o.paymentMethod] ?? o.paymentMethod}</span>
+                      {/* Refunds give back the product price only, never the delivery charge */}
+                      {o.paymentStatus === "REFUNDED" && <span className="text-[11px] font-semibold text-rose-500">Refunded {formatBDT(o.subtotal - o.discount)}</span>}
                     </div>
                   </td>
                   <td className="px-4 py-4">

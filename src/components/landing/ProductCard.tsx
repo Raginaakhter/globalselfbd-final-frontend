@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/shop";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import ProductImage from "@/components/shop/ProductImage";
+import Stars from "@/components/reviews/Stars";
 
 export default function ProductCard({ product }: { product: StoreProduct }) {
   const router = useRouter();
@@ -89,6 +90,12 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
           </h3>
 
           {detail && <p className="text-[11px] sm:text-xs font-medium text-slate-500 mb-2 line-clamp-1">{detail}</p>}
+          {!!product.rating?.totalReviews && (
+            <p className="flex items-center gap-1 text-[11px] text-slate-500 mb-1">
+              <Stars value={product.rating.averageRating} size="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="font-semibold">({product.rating.totalReviews})</span>
+            </p>
+          )}
         </div>
       </div>
 

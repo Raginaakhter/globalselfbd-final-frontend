@@ -44,6 +44,8 @@ export interface Product {
   stock?: number;
   /** Staff with products.update only */
   productCost?: number;
+  /** From APPROVED reviews only */
+  rating?: ProductRating;
   createdAt: string;
   updatedAt: string;
 }
@@ -89,6 +91,10 @@ export interface Order {
   totalQuantity: number;
   subtotal: number;
   discount: number;
+  /** Coupon used on this order, if any */
+  couponCode?: string | null;
+  /** Backend says whether the customer may still cancel it */
+  canCancel?: boolean;
   shippingCost: number;
   totalAmount: number;
   paymentMethod: PaymentMethod;
@@ -102,6 +108,8 @@ export interface Order {
   deliveredAt?: string | null;
   paidAt?: string | null;
   refundedAt?: string | null;
+  /** Product price given back on refund; the delivery charge is never refunded */
+  refundAmount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -316,6 +324,8 @@ export interface SalesPeriod {
   to: string;
   amount: number;
   orders: number;
+  /** Delivered orders that were refunded; they count their delivery charge only */
+  refundedOrders?: number;
   productSales: number;
   shippingCost: number;
   discount: number;
@@ -474,4 +484,203 @@ export interface ContactSummary {
   read: number;
   replied: number;
   total: number;
+}
+
+/* ---------- Coupons ---------- */
+
+export type DiscountType = "PERCENTAGE" | "FIXED";
+export type CouponScope = "ENTIRE_ORDER" | "CATEGORIES" | "PRODUCTS";
+/** Saved status plus dates and usage */
+export type CouponState = "ACTIVE" | "INACTIVE" | "SCHEDULED" | "EXPIRED" | "USED_UP";
+
+export interface Coupon {
+  _id: string;
+  code: string;
+  description: string;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderAmount: number | null;
+  maxDiscount: number | null;
+  usageLimit: number | null;
+  perUserLimit: number | null;
+  scope: CouponScope;
+  categoryIds: string[];
+  productIds: string[];
+  startsAt: string;
+  expiresAt: string;
+  status: Status;
+  usedCount: number;
+  state: CouponState;
+  remainingUses: number | null;
+  createdAt: string;
+  updatedAt: string;
+  /** GET /coupons/:id only */
+  categories?: { _id: string; name: string; slug: string }[];
+  products?: { _id: string; productTitle: string; slug: string; thumbnail: string }[];
+}
+
+/* ---------- Invoices ---------- */
+
+/** Order and payment statuses are live from the order, not frozen on the invoice. */
+export interface InvoiceListItem {
+  _id: string;
+  invoiceNumber: string;
+  orderId: string;
+  orderNumber: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  subtotal: number;
+  discount: number;
+  couponCode: string | null;
+  shippingCost: number;
+  totalAmount: number;
+  paymentMethod: PaymentMethod;
+  issuedAt: string;
+  orderStatus: OrderStatus;
+  paymentStatus: PaymentStatus;
+  /** Product price given back on refund (0 when not refunded) */
+  refundAmount: number;
+  itemCount: number;
+}
+
+export interface InvoiceItem {
+  productId: string;
+  productTitle: string;
+  selectedSize: string | null;
+  selectedUnit: string | null;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export interface Invoice extends Omit<InvoiceListItem, "itemCount"> {
+  customerEmail: string | null;
+  shippingAddress: string;
+  shippingArea: string;
+  shippingCity: string;
+  items: InvoiceItem[];
+  paidAt: string | null;
+  deliveredAt: string | null;
+  /** totalAmount - refundAmount */
+  netAmount: number;
+  seller: { name: string; logoUrl: string; phone: string; email: string; address: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceSummary {
+  totalInvoices: number;
+  totalSales: number;
+  todayInvoices: number;
+  todaySales: number;
+  totalProductSales: number;
+  totalShipping: number;
+  todayProductSales: number;
+  todayShipping: number;
+  basis: string;
+}
+
+export type InvoiceDateRange = "today" | "yesterday" | "last7Days" | "last30Days" | "thisMonth" | "lastMonth";
+
+/* ---------- Reviews ---------- */
+
+export type ReviewStatus = "PENDING" | "APPROVED" | "REJECTED" | "HIDDEN";
+
+export interface ProductRating {
+  averageRating: number;
+  totalReviews: number;
+}
+
+export interface AdminReview {
+  _id: string;
+  customerId: string;
+  orderId: string;
+  productId: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string | null;
+  productTitle: string;
+  productImage: string;
+  rating: number;
+  comment: string;
+  status: ReviewStatus;
+  showOnHomepage: boolean;
+  /** Other products the admin attached this review to (it also shows on their pages) */
+  associatedProductIds: string[];
+  associatedProducts: ReviewProductRef[];
+  /** Slug of the product the customer bought */
+  productSlug: string | null;
+  moderatedBy: string | null;
+  moderatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** GET /admin/reviews/:id only */
+  product?: { _id: string; slug: string; status: Status; ratingAverage: number; ratingCount: number } | null;
+  moderatedByName?: string | null;
+  audit?: ReviewAuditEntry[];
+}
+
+export interface ReviewProductRef {
+  _id: string;
+  productTitle: string;
+  slug: string;
+  thumbnail: string;
+  status: Status;
+}
+
+export interface ReviewAuditEntry {
+  action: string;
+  by: string | null;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+  at: string;
+}
+
+export interface AdminReviewSummary {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  hidden: number;
+  onHomepage: number;
+}
+
+/** Public review (APPROVED only) */
+export interface PublicReview {
+  _id: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  verifiedPurchase: boolean;
+  /** Set on reviews an admin attached from another product: the product actually bought */
+  reviewedProduct?: string;
+  createdAt: string;
+}
+
+export interface ProductReviewSummary extends ProductRating {
+  breakdown: Record<"1" | "2" | "3" | "4" | "5", number>;
+}
+
+export interface HomepageReview extends PublicReview {
+  productId: string;
+  productName: string;
+  productImage: string;
+  productSlug: string;
+}
+
+export interface ReviewEligibility {
+  eligible: boolean;
+  alreadyReviewed: boolean;
+  productId: string;
+  orders: { orderId: string; orderNumber: string; deliveredAt: string }[];
+}
+
+export interface MyReview {
+  _id: string;
+  orderNumber: string;
+  productTitle: string;
+  rating: number;
+  comment: string;
+  status: ReviewStatus;
 }

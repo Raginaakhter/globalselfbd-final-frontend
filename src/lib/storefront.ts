@@ -1,5 +1,5 @@
 // Storefront shapes returned by the public backend endpoints (GET /api/public/*). Client + server safe.
-import type { ProductUnit, Status } from "@/lib/backend-types";
+import type { ProductRating, ProductUnit, Status } from "@/lib/backend-types";
 
 export interface StoreCategory {
   _id: string;
@@ -29,6 +29,8 @@ export interface StoreProduct {
   thumbnail: string;
   gallery: string[];
   availability: "IN_STOCK" | "OUT_OF_STOCK";
+  /** Average of APPROVED reviews */
+  rating?: ProductRating;
   createdAt: string;
   breadcrumb?: { _id: string; name: string; slug: string }[];
 }

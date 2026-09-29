@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { fetchSite } from "@/lib/site-fetch";
 import ContactDetailsBlock from "@/components/legal/ContactDetailsBlock";
-import { Globe, Ship, ShoppingBag, Leaf, HandHeart, ShieldCheck, Handshake } from "lucide-react";
+import { Globe, ShoppingBag, Leaf, HandHeart, ShieldCheck, Handshake } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "About Us | Global Shelf BD",
@@ -10,18 +10,16 @@ export const metadata: Metadata = {
 };
 
 const MISSION_POINTS = [
-  { icon: Globe, text: "Connect global markets with Bangladesh through responsible import and export." },
+  { icon: Globe, text: "Connect global markets with Bangladesh through responsible import." },
   { icon: ShieldCheck, text: "Provide authentic and quality products sourced from trusted brands and suppliers." },
   { icon: ShoppingBag, text: "Make global shopping simple and accessible through our online and retail channels." },
   { icon: Handshake, text: "Build long-term relationships with customers, suppliers, brands, and business partners." },
-  { icon: Ship, text: "Promote Bangladeshi products globally by creating new export and international business opportunities." },
   { icon: Leaf, text: "Encourage better choices by bringing quality, organic, healthy, and responsibly sourced products to consumers." },
   { icon: HandHeart, text: "Put trust, transparency, and customer satisfaction first in everything we do." },
 ];
 
 const WHAT_WE_DO = [
   { title: "Import", body: "We source and legally import authentic and quality products from trusted suppliers and brands across different countries." },
-  { title: "Export", body: "We also aim to connect Bangladeshi products with international markets by developing export opportunities and building relationships with overseas buyers and distributors." },
   { title: "Retail", body: "Through our retail operations, we make carefully selected products available to customers in Bangladesh." },
   { title: "Online Shopping", body: "Our e-commerce platform provides customers with a convenient way to discover, compare, and purchase products from different categories." },
   { title: "B2B & B2C", body: "We serve both business customers and individual consumers, creating opportunities for wholesale, distribution, retail, and online sales." },
@@ -30,7 +28,6 @@ const WHAT_WE_DO = [
 
 const VISION_POINTS = [
   "Bring global products to Bangladesh.",
-  "Take quality Bangladeshi products to the world.",
   "Build lasting relationships based on trust.",
   "Make quality products easier to access.",
 ];
@@ -49,11 +46,10 @@ export default async function AboutPage() {
           Connecting the World Through Trusted Products
         </h1>
         <p className="mt-5 text-slate-700 leading-relaxed max-w-2xl mx-auto">
-          At Global Shelf BD, our mission is to make quality products from around the world more accessible to people and businesses in Bangladesh,
-          while creating opportunities for quality Bangladeshi products to reach international markets.
+          At Global Shelf BD, our mission is to make quality products from around the world more accessible to people and businesses in Bangladesh.
         </p>
         <p className="mt-3 text-slate-700 leading-relaxed max-w-2xl mx-auto">
-          As an Importer, Exporter, Retailer, and Online Shopping Platform, we are committed to sourcing authentic products from trusted suppliers,
+          As an Importer, Retailer, and Online Shopping Platform, we are committed to sourcing authentic products from trusted suppliers,
           maintaining high standards of quality, and providing a convenient, transparent, and reliable shopping experience.
         </p>
       </div>
@@ -80,7 +76,6 @@ export default async function AboutPage() {
           We are not here simply to sell products. We are here to build trust, create connections, and make quality products more accessible.
         </p>
         <p className="mt-5 font-semibold text-brand-300">From the World, For Your Home.</p>
-        <p className="font-semibold text-brand-300">From Bangladesh, To the World.</p>
       </section>
 
       {/* Vision */}
@@ -101,7 +96,7 @@ export default async function AboutPage() {
         <h2 className="text-xl font-bold text-navy-800 mb-3">What We Are: Your Gateway to Global Products</h2>
         <div className="text-slate-700 leading-relaxed space-y-3">
           <p>
-            Global Shelf BD is a Bangladesh-based Importer, Exporter, Retailer, and Online Shopping Platform, connecting customers and businesses
+            Global Shelf BD is a Bangladesh-based Importer, Retailer, and Online Shopping Platform, connecting customers and businesses
             with quality products from Bangladesh and around the world.
           </p>
           <p>
@@ -118,7 +113,7 @@ export default async function AboutPage() {
 
       {/* What We Do */}
       <section className="mb-14">
-        <h2 className="text-xl font-bold text-navy-800 mb-2">What We Do: We Source. We Import. We Export. We Retail. We Deliver.</h2>
+        <h2 className="text-xl font-bold text-navy-800 mb-2">What We Do: We Source. We Import. We Retail. We Deliver.</h2>
         <p className="text-slate-700 leading-relaxed mb-5">
           At Global Shelf BD, we operate across multiple areas of the supply chain to create a reliable connection between international markets,
           suppliers, businesses, and consumers.

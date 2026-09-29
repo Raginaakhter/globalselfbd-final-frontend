@@ -6,6 +6,8 @@ import {
   PromoBanner,
   BrandsMarquee,
   DeliveryPromise,
+  AboutIntro,
+  CustomerReviews,
   Newsletter,
 } from "@/components/landing";
 import { fetchProducts } from "@/lib/server/storefront";
@@ -25,6 +27,8 @@ export default async function Home() {
       <PromoBanner />
       <BrandsMarquee />
       <DeliveryPromise />
+      <CustomerReviews />
+      <AboutIntro />
       <Newsletter />
     </>
   );

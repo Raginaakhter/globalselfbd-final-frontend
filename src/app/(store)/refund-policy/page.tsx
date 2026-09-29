@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "How returns, replacements and refunds work at Global Shelf BD.",
 };
 
-const LAST_UPDATED = "September 22, 2026";
+const LAST_UPDATED = "September 29, 2026";
 
 function buildSections(): LegalSection[] {
   return [
@@ -16,8 +16,8 @@ function buildSections(): LegalSection[] {
       title: "1. Return Request Period",
       body: (
         <>
-          <p>Customers may request a return within <strong>48 hours</strong> of receiving the product.</p>
-          <p>For damaged, defective, incorrect, or expired products, customers must contact us within this 48-hour period.</p>
+          <p>Customers may request a return within <strong>24 hours</strong> of receiving the product.</p>
+          <p>For damaged, defective, incorrect, or expired products, customers must contact us within this 24-hour period.</p>
           <p>We strongly recommend checking your package and products immediately upon delivery.</p>
         </>
       ),
@@ -45,7 +45,7 @@ function buildSections(): LegalSection[] {
       title: "3. Damaged or Defective Products",
       body: (
         <>
-          <p>If you receive a product that is damaged or defective, please contact us within 48 hours of delivery. We may ask you to provide:</p>
+          <p>If you receive a product that is damaged or defective, please contact us within 24 hours of delivery. We may ask you to provide:</p>
           <ul>
             <li>Order number or proof of purchase</li>
             <li>Photographs/videos of the damaged or defective product</li>
@@ -62,7 +62,7 @@ function buildSections(): LegalSection[] {
       title: "4. Wrong Product Delivered",
       body: (
         <>
-          <p>If you receive a product different from the one you ordered, please contact us within 48 hours of delivery.</p>
+          <p>If you receive a product different from the one you ordered, please contact us within 24 hours of delivery.</p>
           <p>Please provide your order number and clear photographs of the product and packaging.</p>
           <p>After verification, we will arrange an appropriate resolution, which may include replacement of the correct product or a refund.</p>
         </>
@@ -73,7 +73,7 @@ function buildSections(): LegalSection[] {
       body: (
         <>
           <p>We take product authenticity, quality, and expiry dates seriously.</p>
-          <p>If you receive a product that is already expired or has a significant product/label discrepancy, please contact us within 48 hours of delivery.</p>
+          <p>If you receive a product that is already expired or has a significant product/label discrepancy, please contact us within 24 hours of delivery.</p>
           <p>Subject to verification, we may provide a replacement or refund as appropriate.</p>
         </>
       ),
@@ -132,7 +132,7 @@ function buildSections(): LegalSection[] {
           <p>Please do not send any product back to us without first contacting Global Shelf BD and receiving return instructions.</p>
           <p>To initiate a return request:</p>
           <ul>
-            <li><strong>Step 1:</strong> Contact our customer service team within 48 hours of receiving your order.</li>
+            <li><strong>Step 1:</strong> Contact our customer service team within 24 hours of receiving your order.</li>
             <li><strong>Step 2:</strong> Provide your order number and explain the reason for the return.</li>
             <li><strong>Step 3:</strong> Provide photographs/videos or other information requested by our team.</li>
             <li><strong>Step 4:</strong> We will review the claim and inform you whether the return request is approved.</li>

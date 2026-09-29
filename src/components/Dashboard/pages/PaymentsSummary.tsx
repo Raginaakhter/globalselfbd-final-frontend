@@ -47,7 +47,11 @@ export default function PaymentsSummary() {
             {/* The big number is the product price (the company's money); shipping is handed to the shipping company */}
             <div className="mt-2 text-2xl font-black text-slate-900">{split ? formatBDT(split.productAmount) : "…"}</div>
             <div className="text-[11px] text-slate-400">Product price · {sub}</div>
-            {split && (
+            {split && title === "Refunded" && (
+              // Refunds give back only the product price; the delivery charge stays with the shipping company
+              <p className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500">Product price only. Delivery charge is not refunded.</p>
+            )}
+            {split && title !== "Refunded" && (
               <dl className="mt-3 space-y-1 border-t border-slate-100 pt-2 text-xs">
                 <div className="flex justify-between gap-2">
                   <dt className="text-slate-500">Shipping (to shipping co.)</dt>

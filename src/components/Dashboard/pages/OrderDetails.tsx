@@ -2,18 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CreditCard, MapPin, Package, UserRound } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ArrowLeft, CreditCard, FileText, MapPin, Package, UserRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import type { AdminOrder, OrderStatus, PaymentStatus } from "@/lib/backend-types";
+import type { AdminOrder, Invoice, InvoiceListItem, OrderStatus, PaymentStatus } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
-import { useApiQuery } from "../api";
+import { errorMessage, qs, useApiQuery } from "../api";
 import { formatBDT } from "../format";
 import { ErrorBox, Spinner, StatusPill, useConfirm } from "../ui";
 import { ProductThumb } from "./ProductsCatalog";
 import { ORDER_STATUSES, PAYMENT_METHOD_LABELS, formatDateTime, useOrderMutations } from "./orderShared";
 
 export default function OrderDetails({ orderId }: { orderId: string }) {
-  const { hasPermission } = useAuth();
+  const { api, hasPermission } = useAuth();
+  const router = useRouter();
   const confirm = useConfirm();
   const { setStatus, setPaymentStatus } = useOrderMutations();
   const order = useApiQuery<AdminOrder>(`/admin/orders/${encodeURIComponent(orderId)}`);
@@ -40,11 +43,35 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
 
   const changePayment = async (next: PaymentStatus) => {
     if (next === "REFUNDED") {
-      const ok = await confirm({ title: "Mark as refunded?", text: "REFUNDED is final and cannot be changed later.", confirmText: "Yes, Refunded" });
+      const ok = await confirm({
+        title: `Refund ${formatBDT(o.subtotal - o.discount)}?`,
+        text: `Only the product price is refunded. The delivery charge (${formatBDT(o.shippingCost)}) is not refunded. REFUNDED is final.`,
+        confirmText: "Yes, Refunded",
+      });
       if (!ok) return;
     }
     run(() => setPaymentStatus(o._id, next));
   };
+
+  // POST returns the existing invoice when the order already has one; view-only roles look it up instead
+  const openInvoice = async () => {
+    setBusy(true);
+    try {
+      let invoiceNumber: string | undefined;
+      if (hasPermission("invoices.create")) {
+        invoiceNumber = (await api<Invoice>("/invoices", { method: "POST", body: JSON.stringify({ orderId: o._id }) })).data.invoiceNumber;
+      } else {
+        const res = await api<InvoiceListItem[]>(`/invoices${qs({ search: o.orderNumber, limit: 5 })}`);
+        invoiceNumber = res.data.find((i) => i.orderId === o._id)?.invoiceNumber;
+      }
+      if (invoiceNumber) router.push(`${BASE}/invoices/${encodeURIComponent(invoiceNumber)}`);
+      else toast.error("This order has no invoice yet.");
+    } catch (err) {
+      toast.error(errorMessage(err, "Could not open the invoice"));
+    }
+    setBusy(false);
+  };
+  const canInvoice = !cancelledOrder(o) && (hasPermission("invoices.create") || hasPermission("invoices.view"));
 
   const nextStatuses = hasPermission("orders.status") ? (o.allowedNextStatuses ?? []) : [];
   const nextPayments = hasPermission("orders.paymentStatus") ? (o.allowedNextPaymentStatuses ?? []) : [];
@@ -66,6 +93,15 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {canInvoice && (
+            <button
+              onClick={openInvoice}
+              disabled={busy}
+              className="mr-1 inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+            >
+              <FileText className="h-4 w-4" /> Invoice
+            </button>
+          )}
           <StatusPill value={o.orderStatus} />
           <StatusPill value={o.paymentStatus} />
         </div>
@@ -129,9 +165,15 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
             </ul>
             <dl className="mt-4 space-y-1.5 border-t border-slate-100 pt-4 text-sm">
               <Row label="Products" value={formatBDT(o.subtotal)} />
-              {o.discount > 0 && <Row label="Discount" value={`− ${formatBDT(o.discount)}`} />}
+              {o.discount > 0 && <Row label={o.couponCode ? `Discount (coupon ${o.couponCode})` : "Discount"} value={`− ${formatBDT(o.discount)}`} />}
               <Row label="Delivery charge" value={formatBDT(o.shippingCost)} />
               <Row label="Total" value={formatBDT(o.totalAmount)} strong />
+              {o.paymentStatus === "REFUNDED" && (
+                <>
+                  <Row label="Refunded (product price)" value={`− ${formatBDT(o.refundAmount || o.subtotal - o.discount)}`} />
+                  <Row label="Kept: delivery charge (shipping company)" value={formatBDT(o.shippingCost)} />
+                </>
+              )}
             </dl>
           </section>
         </div>
@@ -218,3 +260,6 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
     </div>
   );
 }
+
+// Cancelled orders cannot get an invoice
+const cancelledOrder = (o: AdminOrder) => o.orderStatus === "CANCELLED";

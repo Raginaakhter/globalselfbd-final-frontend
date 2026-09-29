@@ -45,7 +45,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${hindSiliguri.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col font-sans bg-[#f6faf7] text-slate-900 selection:bg-brand-500 selection:text-white" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col font-sans bg-[#f5f8fc] text-slate-900 selection:bg-brand-500 selection:text-white" suppressHydrationWarning>
           <AuthProvider>
             <SiteProvider value={site}>
             <WishlistProvider>

@@ -58,15 +58,15 @@ export default function DeliveryPromise() {
   const cards = [
     {
       icon: Truck,
-      accent: "from-emerald-400 to-teal-500",
+      accent: "from-blue-500 to-blue-800",
       value: `${formatPrice(outsideDhaka)}`,
-      label: "Delivery anywhere in Bangladesh, in 2–4 days",
+      label: "Delivery anywhere in Bangladesh, in 3–5 days",
     },
     {
       icon: Clock3,
       accent: "from-sky-400 to-blue-500",
       value: `${formatPrice(insideDhaka)}`,
-      label: "Delivery inside Dhaka, in 1–2 days",
+      label: "Delivery inside Dhaka, in 1–3 days",
     },
     {
       icon: Wallet,

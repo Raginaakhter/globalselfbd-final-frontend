@@ -22,7 +22,7 @@ export const SITE_CONTENT: Omit<SiteData, "categories" | "banners" | "promoCards
   },
   trustBadges: [
     { title: "100% Authentic", body: "Directly imported from UK & USA official sources", emoji: "🛡️" },
-    { title: "Fast Delivery", body: "1–2 days inside Dhaka, 2–4 days nationwide", emoji: "🚀" },
+    { title: "Fast Delivery", body: "1–3 days inside Dhaka, 3–5 days nationwide", emoji: "🚀" },
     { title: "Cash on Delivery", body: "Pay conveniently upon receiving your order", emoji: "💵" },
   ],
   navLinks: [

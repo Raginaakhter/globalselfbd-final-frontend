@@ -19,11 +19,13 @@ import {
   Heart,
   Truck,
 } from "lucide-react";
+import MyReviews from "@/components/reviews/MyReviews";
 
 function ProfileContent() {
   const { user, isStaff, api, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<"account" | "orders">(searchParams.get("tab") === "orders" ? "orders" : "account");
+  const initialTab = searchParams.get("tab");
+  const [tab, setTab] = useState<"account" | "orders" | "reviews">(initialTab === "orders" || initialTab === "reviews" ? initialTab : "account");
 
   const [orders, setOrders] = useState<OrderListItem[] | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -93,6 +95,14 @@ function ProfileContent() {
           >
             My Orders
           </button>
+          <button
+            onClick={() => setTab("reviews")}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer ${
+              tab === "reviews" ? "bg-cyan-600 text-white" : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            My Reviews
+          </button>
           <Link
             href="/wishlist"
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
@@ -109,6 +119,8 @@ function ProfileContent() {
 
         {tab === "account" ? (
           <AccountPanel />
+        ) : tab === "reviews" ? (
+          <MyReviews />
         ) : (
           <div className="auth-card rounded-3xl p-6 sm:p-8 shadow-xl">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-5">

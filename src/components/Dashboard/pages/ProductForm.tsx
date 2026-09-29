@@ -208,7 +208,7 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
                         key={s}
                         type="button"
                         onClick={() => set("sizes", on ? form.sizes.filter((x) => x !== s) : [...form.sizes, s])}
-                        className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-bold ${on ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"}`}
+                        className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-bold ${on ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-600"}`}
                       >
                         {s}
                       </button>

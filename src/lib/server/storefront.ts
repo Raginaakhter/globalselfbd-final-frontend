@@ -1,7 +1,7 @@
 // Server-side only: storefront data for server components, straight from the public backend API.
 
 import type { Pagination, StoreCategory, StoreProduct } from "@/lib/storefront";
-import { EMPTY_FOOTER, type Banner, type Brand, type FooterSettings, type ShippingSettings } from "@/lib/backend-types";
+import { EMPTY_FOOTER, type Banner, type Brand, type FooterSettings, type HomepageReview, type ShippingSettings } from "@/lib/backend-types";
 import { callBackend } from "./backend";
 
 export async function fetchCategoryTree(): Promise<StoreCategory[]> {
@@ -62,4 +62,10 @@ export async function fetchFooter(): Promise<FooterSettings> {
 export async function fetchShipping(): Promise<ShippingSettings | null> {
   const { body } = await callBackend<ShippingSettings>("/api/public/shipping");
   return body.success && body.data ? body.data : null;
+}
+
+/** Approved reviews an admin picked for the homepage carousel. */
+export async function fetchHomepageReviews(limit = 12): Promise<HomepageReview[]> {
+  const { body } = await callBackend<HomepageReview[]>(`/api/reviews/homepage?limit=${limit}`);
+  return body.success && Array.isArray(body.data) ? body.data : [];
 }

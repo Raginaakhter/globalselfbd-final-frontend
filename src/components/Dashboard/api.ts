@@ -17,6 +17,8 @@ export function useApiQuery<T>(path: string | null) {
   const { api } = useAuth();
   const [data, setData] = useState<T | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
+  // Whole response body, for endpoints that send extra top-level fields (e.g. invoice `summary`)
+  const [response, setResponse] = useState<(ApiResponse<T> & Record<string, unknown>) | null>(null);
   const [loading, setLoading] = useState(Boolean(path));
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
@@ -31,6 +33,7 @@ export function useApiQuery<T>(path: string | null) {
       if (id !== requestId.current) return;
       setData(res.data);
       setPagination(res.pagination ?? null);
+      setResponse(res as ApiResponse<T> & Record<string, unknown>);
     } catch (err) {
       if (id !== requestId.current) return;
       setError(errorMessage(err, "Failed to load data"));
@@ -43,7 +46,7 @@ export function useApiQuery<T>(path: string | null) {
     queueMicrotask(() => void load());
   }, [load]);
 
-  return { data, pagination, loading, error, reload: load, setData };
+  return { data, pagination, response, loading, error, reload: load, setData };
 }
 
 /** Builds a query string, skipping empty values. */

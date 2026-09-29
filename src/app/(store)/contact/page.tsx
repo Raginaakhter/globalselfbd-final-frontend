@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 const PARTNERSHIPS = [
   { icon: Globe, label: "International Suppliers & Brands" },
-  { icon: Ship, label: "Import & Export Partners" },
+  { icon: Ship, label: "Import Partners" },
   { icon: Store, label: "Retailers & Distributors" },
   { icon: Handshake, label: "B2B Customers" },
   { icon: Package, label: "Wholesale Buyers" },
@@ -31,7 +31,7 @@ export default async function ContactPage() {
         </p>
         <p className="mt-2 text-slate-600 leading-relaxed">
           Whether you are a customer looking for an authentic international product, a supplier interested in working with us, or a business
-          partner exploring import, export, retail, or distribution opportunities, we would be happy to hear from you.
+          partner exploring import, retail, or distribution opportunities, we would be happy to hear from you.
         </p>
       </div>
 

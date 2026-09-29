@@ -16,7 +16,7 @@ function buildSections(): LegalSection[] {
       title: "1. About Global Shelf BD",
       body: (
         <>
-          <p>Global Shelf BD operates as an Importer, Exporter, Retailer, and Online Shopping Platform.</p>
+          <p>Global Shelf BD operates as an Importer, Retailer, and Online Shopping Platform.</p>
           <p>We source and trade products from Bangladesh and international markets and may offer products including:</p>
           <ul>
             <li>Baby &amp; Kids Products</li>

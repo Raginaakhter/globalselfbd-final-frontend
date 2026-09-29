@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Construction } from "lucide-react";
 
-// Sidebar sections the backend lists in the menu but has no API for yet (invoices, coupons, reviews).
+// Fallback for sidebar sections the backend lists in the menu but that have no page yet.
 export default async function AdminSectionPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params;
   const title = slug
