@@ -25,12 +25,33 @@ const hindSiliguri = Hind_Siliguri({
   weight: ["400", "500", "600", "700"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.globalshelfbd.com";
+const SITE_TITLE = "Global Shelf BD - Authentic Global Products, Delivered Across Bangladesh";
+const SITE_DESCRIPTION = "Global Shelf BD! Next-generation e-commerce platform bringing premium authentic global products to Bangladesh.";
+
 export const metadata: Metadata = {
-  title: "Global Shelf BD - Authentic Global Products, Delivered Across Bangladesh",
-  description:
-    "Global Shelf BD! Next-generation e-commerce platform bringing premium authentic global products to Bangladesh.",
+  // Resolves relative URLs in openGraph/twitter images to absolute ones for crawlers
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   keywords: ["Global Shelf BD", "E-commerce Bangladesh", "Online Shopping BD", "Global Products"],
   authors: [{ name: "Global Shelf BD Team" }],
+  openGraph: {
+    // Preview shown when the URL is shared on Facebook, WhatsApp, LinkedIn etc.
+    type: "website",
+    siteName: "Global Shelf BD",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    locale: "en_US",
+    images: [{ url: "/logo-full.png", width: 788, height: 742, alt: "Global Shelf BD" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/logo-full.png"],
+  },
 };
 
 // Storefront content is read from the API on every request, so DB edits show up immediately.
