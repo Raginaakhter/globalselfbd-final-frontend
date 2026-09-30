@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import CategoryIcon from "@/components/shop/CategoryIcon";
-import { Search, ShoppingCart, User as UserIcon, Menu, X, LayoutGrid, Package, Heart } from "lucide-react";
+import { ChevronDown, Search, ShoppingCart, User as UserIcon, Menu, X, LayoutGrid, Package, Heart } from "lucide-react";
 import Logo from "./Logo";
 import { useSite } from "@/context/SiteContext";
 
@@ -171,30 +171,57 @@ export default function Header() {
               </div>
             )}
           </div>
-          {navLinks.map((l) => (
-            <Link
-              key={l.label}
-              href={l.href}
-              aria-current={isActive(l.href) ? "page" : undefined}
-              className={`group relative px-4 h-11 flex items-center text-sm font-semibold transition-colors duration-200 ${
-                isActive(l.href)
-                  ? "text-blue-900 bg-blue-50"
-                  : l.hot
-                    ? "text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                    : "text-slate-700 hover:text-blue-900 hover:bg-blue-50/70"
-              }`}
-            >
-              {/* Underline: full width on the active page, grows in on hover */}
+          {navLinks.map((l) => {
+            // Any child link active also lights up the parent (e.g. About Us stays highlighted on /privacy-policy)
+            const active = isActive(l.href) || (l.children ?? []).some((c) => isActive(c.href));
+            const item = (
               <span
-                aria-hidden="true"
-                className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-blue-900 transition-transform duration-300 ${
-                  isActive(l.href) ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                aria-current={active ? "page" : undefined}
+                className={`group relative px-4 h-11 flex items-center gap-1 text-sm font-semibold transition-colors duration-200 ${
+                  active
+                    ? "text-blue-900 bg-blue-50"
+                    : l.hot
+                      ? "text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                      : "text-slate-700 hover:text-blue-900 hover:bg-blue-50/70"
                 }`}
-              />
-              {l.hot && <span className="mr-1.5">🔥</span>}
-              {l.label}
-            </Link>
-          ))}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-blue-900 transition-transform duration-300 ${
+                    active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                  }`}
+                />
+                {l.hot && <span className="mr-1.5">🔥</span>}
+                {l.label}
+                {l.children && <ChevronDown className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" />}
+              </span>
+            );
+
+            if (l.children) {
+              return (
+                // group triggers the CSS-only dropdown; clicking the label still goes to the parent page
+                <div key={l.label} className="relative group">
+                  <Link href={l.href} aria-haspopup="menu">{item}</Link>
+                  <div className="absolute left-0 top-full min-w-56 rounded-b-2xl border border-slate-200 bg-white shadow-2xl p-2 z-30 opacity-0 pointer-events-none translate-y-1 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 transition">
+                    {l.children.map((c) => (
+                      <Link
+                        key={c.href}
+                        href={c.href}
+                        aria-current={isActive(c.href) ? "page" : undefined}
+                        className={`block px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                          isActive(c.href) ? "text-blue-900 bg-blue-50" : "text-slate-700 hover:text-blue-900 hover:bg-blue-50/70"
+                        }`}
+                      >
+                        {c.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            return <Link key={l.label} href={l.href}>{item}</Link>;
+          })}
         </div>
       </nav>
 
@@ -211,17 +238,36 @@ export default function Header() {
           </div>
           <div className="px-4 pb-4 flex flex-col">
             {navLinks.map((l) => (
-              <Link
-                key={l.label}
-                href={l.href}
-                onClick={() => setMenuOpen(false)}
-                aria-current={isActive(l.href) ? "page" : undefined}
-                className={`py-2.5 px-3 text-sm font-semibold border-t border-slate-100 transition-colors ${
-                  isActive(l.href) ? "text-blue-900 bg-blue-50 border-l-4 border-l-blue-900" : "text-navy-700 hover:text-blue-900 hover:bg-blue-50/70"
-                }`}
-              >
-                {l.label}
-              </Link>
+              <div key={l.label} className="border-t border-slate-100">
+                <Link
+                  href={l.href}
+                  onClick={() => setMenuOpen(false)}
+                  aria-current={isActive(l.href) ? "page" : undefined}
+                  className={`block py-2.5 px-3 text-sm font-semibold transition-colors ${
+                    isActive(l.href) ? "text-blue-900 bg-blue-50 border-l-4 border-l-blue-900" : "text-navy-700 hover:text-blue-900 hover:bg-blue-50/70"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+                {l.children && (
+                  // Child links show as an indented list under the parent so the whole menu is scannable in one tap
+                  <div className="pl-6 pb-1">
+                    {l.children.map((c) => (
+                      <Link
+                        key={c.href}
+                        href={c.href}
+                        onClick={() => setMenuOpen(false)}
+                        aria-current={isActive(c.href) ? "page" : undefined}
+                        className={`block py-2 px-3 text-xs font-semibold transition-colors ${
+                          isActive(c.href) ? "text-blue-900 bg-blue-50" : "text-slate-600 hover:text-blue-900 hover:bg-blue-50/70"
+                        }`}
+                      >
+                        {c.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
