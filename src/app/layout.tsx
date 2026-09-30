@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LOGO_URL } from "@/lib/brand";
+import { APPLE_ICON_180, FAVICON_192, FAVICON_32, LOGO_URL } from "@/lib/brand";
 import { Geist, Geist_Mono, Hind_Siliguri } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
@@ -37,6 +37,15 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   keywords: ["Global Shelf BD", "E-commerce Bangladesh", "Online Shopping BD", "Global Products"],
   authors: [{ name: "Global Shelf BD Team" }],
+  // Browser tab / bookmark / home-screen icons; served by Cloudinary at the right sizes
+  icons: {
+    icon: [
+      { url: FAVICON_32, sizes: "32x32", type: "image/png" },
+      { url: FAVICON_192, sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: APPLE_ICON_180, sizes: "180x180", type: "image/png" }],
+    shortcut: FAVICON_32,
+  },
   openGraph: {
     // Preview shown when the URL is shared on Facebook, WhatsApp, LinkedIn etc.
     type: "website",
