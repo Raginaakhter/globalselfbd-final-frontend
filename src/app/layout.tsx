@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LOGO_URL } from "@/lib/brand";
 import { Geist, Geist_Mono, Hind_Siliguri } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
@@ -44,13 +45,13 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     locale: "en_US",
-    images: [{ url: "/logo-full.png", width: 788, height: 742, alt: "Global Shelf BD" }],
+    images: [{ url: LOGO_URL, width: 786, height: 662, alt: "Global Shelf BD" }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ["/logo-full.png"],
+    images: [LOGO_URL],
   },
 };
 

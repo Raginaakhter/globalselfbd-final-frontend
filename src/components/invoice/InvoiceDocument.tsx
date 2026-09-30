@@ -1,4 +1,5 @@
 "use client";
+import { LOGO_URL } from "@/lib/brand";
 
 import { useSite } from "@/context/SiteContext";
 import { PAYMENT_METHOD_LABELS, type Invoice } from "@/lib/backend-types";
@@ -25,7 +26,7 @@ export default function InvoiceDocument({ invoice: inv, className = "" }: { invo
   // The backend seller block can be empty; fall back to the site's own contact details
   const seller = {
     name: inv.seller.name || settings.siteName,
-    logoUrl: inv.seller.logoUrl || "/logo-full.png",
+    logoUrl: inv.seller.logoUrl || LOGO_URL,
     phone: inv.seller.phone || settings.phone,
     email: inv.seller.email || settings.email,
     address: inv.seller.address || settings.address,

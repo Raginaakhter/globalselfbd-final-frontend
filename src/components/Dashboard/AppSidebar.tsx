@@ -1,4 +1,5 @@
 "use client";
+import { LOGO_URL } from "@/lib/brand";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -57,7 +58,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
       <div className="overflow-y-auto pr-1">
         <Link href="/" onClick={onNavigate}>
           <div className="flex items-center gap-2 px-4">
-            <Image src="/logo-full.png" alt="Global Shelf BD" width={200} height={50} className="h-[50px] w-auto object-contain" style={{ width: "auto" }} priority />
+            <Image src={LOGO_URL} alt="Global Shelf BD" width={200} height={50} className="h-[50px] w-auto object-contain" style={{ width: "auto" }} priority />
           </div>
           <p className="border-b px-[50px] pb-2 text-[9px] text-[#A7B2C3]">Enterprise Ecommerce Admin</p>
         </Link>
