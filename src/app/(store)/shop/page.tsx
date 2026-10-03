@@ -4,6 +4,7 @@ import { SearchX } from "lucide-react";
 import { fetchSite } from "@/lib/site-fetch";
 import ProductCard from "@/components/landing/ProductCard";
 import CategoryIcon from "@/components/shop/CategoryIcon";
+import StoreSearchBar from "@/components/shop/StoreSearchBar";
 import { fetchProducts } from "@/lib/server/storefront";
 import { flattenCategories, type StoreCategory } from "@/lib/storefront";
 
@@ -104,6 +105,10 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
         </aside>
 
         <section className="flex-1 min-w-0">
+          <div className="mb-5">
+            <StoreSearchBar placeholder="Search by name, brand or keyword (e.g. honey, lotion, vitamin)..." />
+          </div>
+
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
               <h1 className="text-2xl sm:text-3xl font-black text-navy-700 tracking-tight">{title}</h1>

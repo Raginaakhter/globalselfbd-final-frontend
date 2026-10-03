@@ -56,6 +56,11 @@ export interface ProductOptions {
   units: string[];
 }
 
+/** DELETE /products/:id — always 200; products used in any order are deactivated instead of removed. */
+export type ProductDeleteResult =
+  | { _id: string; productTitle: string; deleted: true; status?: undefined }
+  | { _id: string; productTitle: string; deleted: false; status: Status };
+
 export type OrderStatus = "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 export type PaymentMethod = "CASH_ON_DELIVERY" | "BKASH" | "NAGAD" | "ROCKET" | "CARD";
@@ -683,4 +688,152 @@ export interface MyReview {
   rating: number;
   comment: string;
   status: ReviewStatus;
+}
+
+/* ---------- Combos ---------- */
+
+export interface ComboItemDetail {
+  productId: string;
+  productTitle: string;
+  slug: string;
+  thumbnail: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export interface Combo {
+  _id: string;
+  comboTitle: string;
+  slug: string;
+  description: string;
+  comboPrice: number;
+  thumbnail: string;
+  gallery: string[];
+  categoryId: string | null;
+  items: { productId: string; quantity: number }[];
+  itemDetails: ComboItemDetail[];
+  originalTotal: number;
+  savings: number;
+  discountPercent: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  status: Status;
+  isLive: boolean;
+  displayOrder: number;
+  soldCount: number;
+  revenue: number;
+  views: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ComboPickerProduct {
+  _id: string;
+  productTitle: string;
+  slug: string;
+  thumbnail: string;
+  customerSellPrice: number;
+  customerSpecialPrice: number | null;
+  finalPrice: number;
+  stock: number;
+}
+
+export interface ComboStats {
+  _id: string;
+  comboTitle: string;
+  views: number;
+  soldCount: number;
+  revenue: number;
+}
+
+export interface ComboStatsSummary {
+  totals: {
+    totalRevenue: number;
+    totalSold: number;
+    totalViews: number;
+    totalCombos: number;
+  };
+  topPerformers: {
+    _id: string;
+    comboTitle: string;
+    slug: string;
+    comboPrice: number;
+    soldCount: number;
+    revenue: number;
+    thumbnail: string;
+  }[];
+}
+
+/* ---------- Offers ---------- */
+
+export type OfferState = "ACTIVE" | "INACTIVE" | "SCHEDULED" | "ENDED";
+
+export interface Offer {
+  _id: string;
+  title: string;
+  slug: string;
+  description: string;
+  bannerImage: string | null;
+  badgeColor: string | null;
+  badgeLabel: string;
+  discountType: DiscountType;
+  discountValue: number;
+  startsAt: string;
+  endsAt: string;
+  productIds: string[];
+  categoryIds: string[];
+  minOrderValue: number | null;
+  status: Status;
+  state: OfferState;
+  displayOrder: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  /** GET /api/offers/:id only */
+  products?: { _id: string; productTitle: string; slug: string; thumbnail: string }[];
+  categories?: { _id: string; name: string; slug: string }[];
+}
+
+/* ---------- Updated Cart Item (combo support) ---------- */
+
+export interface CartItemV2 {
+  _id: string;
+  type: "product" | "combo";
+  productId: string | null;
+  comboId: string | null;
+  quantity: number;
+  selectedSize: string | null;
+  selectedUnit: string | null;
+  unitPrice: number;
+  subtotal: number;
+  productSnapshot: { productTitle: string; slug: string; thumbnail: string; customerSellPrice: number; customerSpecialPrice: number | null } | null;
+  comboSnapshot: {
+    comboTitle: string;
+    slug: string;
+    thumbnail: string;
+    comboPrice: number;
+    items: { productId: string; productTitle: string; quantity: number; unitPrice: number }[];
+  } | null;
+  availability: "IN_STOCK" | "OUT_OF_STOCK";
+  isAvailable: boolean;
+  issue: string | null;
+}
+
+export interface CartV2 {
+  _id: string;
+  customerId: string;
+  items: CartItemV2[];
+  itemCount: number;
+  totalQuantity: number;
+  subtotal: number;
+  hasIssues: boolean;
+}
+
+/* ---------- Updated Order Item (combo support) ---------- */
+
+export interface OrderItemV2 extends OrderItem {
+  type?: "product" | "combo";
+  comboId?: string | null;
+  comboItemsSnapshot?: { productId: string; productTitle: string; quantity: number; unitPrice: number }[];
 }

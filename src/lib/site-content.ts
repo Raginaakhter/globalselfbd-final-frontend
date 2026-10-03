@@ -28,18 +28,20 @@ export const SITE_CONTENT: Omit<SiteData, "categories" | "banners" | "promoCards
   navLinks: [
     { label: "Home", href: "/" },
     { label: "Shop All", href: "/shop" },
+    { label: "Offer", href: "/offer", hot: true },
+    { label: "Combo", href: "/combo" },
     {
       label: "About Us",
       href: "/about",
-      // Hover / tap opens a menu with the four policy pages under the About page
+      // Hover / tap opens a menu with contact + policy pages under the About page
       children: [
+        { label: "Contact Us", href: "/contact" },
         { label: "Privacy Policy", href: "/privacy-policy" },
         { label: "Return Policy", href: "/refund-policy" },
         { label: "Shipping Policy", href: "/shipping-policy" },
         { label: "Terms & Conditions", href: "/terms" },
       ],
     },
-    { label: "Contact Us", href: "/contact" },
   ],
   footerColumns: [
     {

@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { CirclePlus, Eye, Package, Pencil, Tag, Trash } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import type { Category, Product, Status } from "@/lib/backend-types";
+import type { Category, Product, ProductDeleteResult, Status } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
-import { qs, useApiAction, useApiQuery } from "../api";
+import { errorMessage, qs, useApiAction, useApiQuery } from "../api";
 import { formatBDT } from "../format";
 import {
   EmptyState,
@@ -40,7 +41,7 @@ export function ProductThumb({ src, alt, className = "h-12 w-12" }: { src?: stri
 }
 
 export default function ProductsCatalog() {
-  const { hasPermission } = useAuth();
+  const { api, hasPermission } = useAuth();
   const action = useApiAction();
   const confirm = useConfirm();
   const [search, setSearch] = useState("");
@@ -74,7 +75,26 @@ export default function ProductsCatalog() {
       text: `"${p.productTitle}" will be deleted. If it appears in any order it is made inactive instead.`,
       confirmText: "Yes, Delete",
     });
-    if (ok && (await action(`/products/${p._id}`, { method: "DELETE" }))) products.reload();
+    if (!ok) return;
+    try {
+      // DELETE /products/:id → 200 in both cases; `data.deleted` says whether it was removed or only deactivated
+      const res = await api<ProductDeleteResult>(`/products/${p._id}`, { method: "DELETE" });
+      if (res.data.deleted) {
+        toast.success(res.message ?? "Product deleted successfully");
+        const last = products.data?.length === 1;
+        products.setData((list) => list?.filter((x) => x._id !== p._id) ?? list);
+        // Emptied a later page: step back, otherwise refresh so pagination totals stay right
+        if (last && page > 1) setPage(page - 1);
+        else products.reload();
+      } else {
+        toast.warning(res.message ?? "Product has orders, so it was deactivated instead of deleted");
+        replace({ ...p, status: res.data.status ?? "INACTIVE" });
+        // Hidden by the "Active" filter now
+        if (status === "ACTIVE") products.reload();
+      }
+    } catch (err) {
+      toast.error(errorMessage(err, "Failed to delete product"));
+    }
   };
 
   return (

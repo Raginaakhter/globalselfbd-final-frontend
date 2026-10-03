@@ -3,6 +3,8 @@ import {
   Truck,
   BadgeCheck,
   GalleryHorizontal,
+  Layers,
+  Megaphone,
   PanelBottom,
   CreditCard,
   FileText,
@@ -27,6 +29,8 @@ export type ModuleKey =
   | "dashboard"
   | "categories"
   | "products"
+  | "combos"
+  | "offers"
   | "orders"
   | "payments"
   | "invoices"
@@ -61,7 +65,9 @@ export const MODULES: ModuleDef[] = [
   { key: "dashboard", title: "Dashboard", path: BASE, icon: House, section: "main", menuKey: "dashboard", editAny: [] },
   { key: "categories", title: "Categories", path: `${BASE}/categories`, icon: FolderTree, section: "main", menuKey: "categories", editAny: ["categories.create", "categories.update", "categories.delete"] },
   { key: "products", title: "Products", path: `${BASE}/products`, icon: WandSparkles, section: "main", menuKey: "products", editAny: ["products.create", "products.update", "products.delete"] },
-  { key: "orders", title: "Orders", path: `${BASE}/orders`, icon: ListOrdered, section: "main", menuKey: "orders", editAny: ["orders.status", "orders.paymentStatus"] },
+  { key: "combos", title: "Combos", path: `${BASE}/combos`, icon: Layers, section: "main", viewAny: ["combos.view"], editAny: ["combos.create", "combos.update", "combos.delete"] },
+  { key: "offers", title: "Offers", path: `${BASE}/offers`, icon: Megaphone, section: "main", viewAny: ["offers.view"], editAny: ["offers.create", "offers.update", "offers.delete"] },
+  { key: "orders", title: "Orders", path: `${BASE}/orders`, icon: ListOrdered, section: "main", menuKey: "orders", editAny: ["orders.status", "orders.paymentStatus", "orders.delete"] },
   { key: "payments", title: "Payments", path: `${BASE}/payments`, icon: CreditCard, section: "main", menuKey: "payments", editAny: ["orders.paymentStatus"] },
   { key: "invoices", title: "Invoices", path: `${BASE}/invoices`, icon: FileText, section: "main", menuKey: "invoices", editAny: ["invoices.create"] },
   { key: "users", title: "Users", path: `${BASE}/users`, icon: Users, section: "main", menuKey: "users", editAny: ["users.create", "users.update", "users.delete", "users.changeRole"] },

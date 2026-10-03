@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ShoppingBag, Trash2, TriangleAlert } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { lineHref, useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/shop";
 import QuantityStepper from "@/components/shop/QuantityStepper";
 import OrderSummary from "@/components/shop/OrderSummary";
@@ -50,19 +50,23 @@ export default function CartPage() {
           <ul className="rounded-3xl bg-white border border-slate-200 divide-y divide-slate-100 shadow-sm">
             {lines.map((l) => (
               <li key={l.key} className={`p-4 sm:p-5 flex gap-4 ${l.isAvailable ? "" : "opacity-70"}`}>
-                <Link href={`/product/${l.slug}`} className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-2xl bg-slate-50 flex items-center justify-center overflow-hidden">
+                <Link href={lineHref(l)} className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-2xl bg-slate-50 flex items-center justify-center overflow-hidden">
                   <ProductImage image={l.thumbnail} alt={l.title} />
                 </Link>
                 <div className="flex-1 min-w-0 flex flex-col">
                   <div className="flex justify-between gap-3">
                     <div className="min-w-0">
-                      <Link href={`/product/${l.slug}`} className="text-sm sm:text-base font-bold text-navy-700 hover:text-brand-700 line-clamp-2">
+                      <Link href={lineHref(l)} className="text-sm sm:text-base font-bold text-navy-700 hover:text-brand-700 line-clamp-2">
                         {l.title}
                       </Link>
                       <p className="text-xs text-slate-500 mt-0.5">
+                        {l.type === "combo" && <span className="mr-1 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-black text-indigo-700">COMBO</span>}
                         {l.size ? `Size ${l.size} · ` : ""}
                         {formatPrice(l.unitPrice)} each
                       </p>
+                      {l.type === "combo" && !!l.comboItems?.length && (
+                        <p className="text-xs text-slate-400 mt-1">Includes: {l.comboItems.map((m) => `${m.quantity}× ${m.productTitle}`).join(" + ")}</p>
+                      )}
                       <CartLineIssue line={l} />
                     </div>
                     <button onClick={() => removeItem(l.key)} aria-label={`Remove ${l.title}`} className="self-start p-2 rounded-full text-slate-400 hover:text-coral-500 hover:bg-rose-50 cursor-pointer">

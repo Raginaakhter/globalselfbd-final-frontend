@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import type { Cart } from "@/lib/backend-types";
+import type { CartV2 as Cart, Combo } from "@/lib/backend-types";
 import type { StoreProduct } from "@/lib/storefront";
 
 const LOCAL_KEY = "gsbd-cart-v2";
@@ -15,9 +15,15 @@ const MAX_QTY = 10;
  * they are moved into the backend cart right after login, and checkout always uses the backend cart.
  */
 export type CartLine = {
-  /** Backend cart item id, or a local key (productId + size) for guests. */
+  /** Backend cart item id, or a local key (productId + size / combo id) for guests. */
   key: string;
+  /** Lines saved before combos existed have no type; treat them as products. */
+  type?: "product" | "combo";
+  /** Empty string for combo lines. */
   productId: string;
+  comboId?: string | null;
+  /** Member products of a combo line. */
+  comboItems?: { productId: string; productTitle: string; quantity: number }[];
   slug: string;
   title: string;
   thumbnail: string;
@@ -46,6 +52,7 @@ interface CartContextType {
   openDrawer: () => void;
   closeDrawer: () => void;
   addItem: (product: StoreProduct, qty?: number, opts?: AddOptions) => Promise<boolean>;
+  addCombo: (combo: Combo, qty?: number, opts?: Omit<AddOptions, "size">) => Promise<boolean>;
   setQty: (key: string, qty: number) => Promise<void>;
   removeItem: (key: string) => Promise<void>;
   clear: () => Promise<void>;
@@ -58,7 +65,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 function readLocal(): CartLine[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(LOCAL_KEY) ?? "[]");
-    return Array.isArray(parsed) ? parsed.filter((l) => l && typeof l.productId === "string" && l.quantity > 0) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((l) => l && l.quantity > 0 && (typeof l.comboId === "string" || (typeof l.productId === "string" && l.productId)))
+      : [];
   } catch {
     return [];
   }
@@ -74,20 +83,28 @@ function writeLocal(lines: CartLine[]) {
 }
 
 const fromServer = (cart: Cart | null | undefined): CartLine[] =>
-  (cart?.items ?? []).map((i) => ({
-    key: i._id,
-    productId: i.productId,
-    slug: i.productSnapshot?.slug ?? i.productId,
-    title: i.productSnapshot?.productTitle ?? "Product",
-    thumbnail: i.productSnapshot?.thumbnail ?? "",
-    unitPrice: i.unitPrice,
-    quantity: i.quantity,
-    size: i.selectedSize,
-    unit: i.selectedUnit,
-    subtotal: i.subtotal,
-    isAvailable: i.isAvailable,
-    issue: i.issue,
-  }));
+  (cart?.items ?? []).map((i) => {
+    const isCombo = i.type === "combo" || (!!i.comboId && !i.productId);
+    return {
+      key: i._id,
+      type: isCombo ? ("combo" as const) : ("product" as const),
+      productId: i.productId ?? "",
+      comboId: i.comboId ?? null,
+      comboItems: i.comboSnapshot?.items?.map((m) => ({ productId: m.productId, productTitle: m.productTitle, quantity: m.quantity })),
+      slug: (isCombo ? i.comboSnapshot?.slug : i.productSnapshot?.slug) ?? i.productId ?? i.comboId ?? "",
+      title: (isCombo ? i.comboSnapshot?.comboTitle : i.productSnapshot?.productTitle) ?? (isCombo ? "Combo" : "Product"),
+      thumbnail: (isCombo ? i.comboSnapshot?.thumbnail : i.productSnapshot?.thumbnail) ?? "",
+      unitPrice: i.unitPrice,
+      quantity: i.quantity,
+      size: i.selectedSize,
+      unit: i.selectedUnit,
+      subtotal: i.subtotal,
+      isAvailable: i.isAvailable,
+      issue: i.issue,
+    };
+  });
+
+const comboKey = (comboId: string) => `combo:${comboId}`;
 
 const localKey = (productId: string, size: string | null) => `${productId}:${size ?? ""}`;
 
@@ -135,7 +152,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       let failed = 0;
       for (const l of pending) {
         try {
-          await api("/cart", { method: "POST", body: JSON.stringify({ productId: l.productId, quantity: l.quantity, size: l.size ?? undefined, unit: l.unit ?? undefined }) });
+          const payload =
+            l.type === "combo" && l.comboId
+              ? { comboId: l.comboId, quantity: l.quantity }
+              : { productId: l.productId, quantity: l.quantity, size: l.size ?? undefined, unit: l.unit ?? undefined };
+          await api("/cart", { method: "POST", body: JSON.stringify(payload) });
         } catch {
           failed++;
         }
@@ -231,6 +252,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             ...cur,
             {
               key,
+              type: "product",
               productId: product._id,
               slug: product.slug,
               title: product.productTitle,
@@ -248,6 +270,48 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       if (ok) {
         if (!opts.silent) toast.success(`${product.productTitle} added to cart`);
+        if (opts.openDrawer !== false) setDrawerOpen(true);
+      }
+      return ok;
+    },
+    [serverCall, updateLocal]
+  );
+
+  const addCombo = useCallback<CartContextType["addCombo"]>(
+    async (combo, qty = 1, opts = {}) => {
+      let ok = true;
+      if (sourceRef.current === "server") {
+        // Backend validates stock on every member product and merges repeat adds.
+        ok = await serverCall("/cart", { method: "POST", body: JSON.stringify({ comboId: combo._id, quantity: qty }) });
+      } else {
+        const key = comboKey(combo._id);
+        updateLocal((cur) => {
+          const existing = cur.find((l) => l.key === key);
+          if (existing) return cur.map((l) => (l.key === key ? { ...l, quantity: Math.min(l.quantity + qty, MAX_QTY) } : l));
+          return [
+            ...cur,
+            {
+              key,
+              type: "combo",
+              productId: "",
+              comboId: combo._id,
+              comboItems: combo.itemDetails?.map((d) => ({ productId: d.productId, productTitle: d.productTitle, quantity: d.quantity })),
+              slug: combo.slug,
+              title: combo.comboTitle,
+              thumbnail: combo.thumbnail,
+              unitPrice: combo.comboPrice,
+              quantity: Math.min(qty, MAX_QTY),
+              size: null,
+              unit: null,
+              subtotal: combo.comboPrice * qty,
+              isAvailable: true,
+              issue: null,
+            },
+          ];
+        });
+      }
+      if (ok) {
+        if (!opts.silent) toast.success(`${combo.comboTitle} added to cart`);
         if (opts.openDrawer !== false) setDrawerOpen(true);
       }
       return ok;
@@ -290,12 +354,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       openDrawer: () => setDrawerOpen(true),
       closeDrawer: () => setDrawerOpen(false),
       addItem,
+      addCombo,
       setQty,
       removeItem,
       clear,
       refresh,
     };
-  }, [lines, source, hydrated, loading, drawerOpen, addItem, setQty, removeItem, clear, refresh]);
+  }, [lines, source, hydrated, loading, drawerOpen, addItem, addCombo, setQty, removeItem, clear, refresh]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
@@ -307,3 +372,6 @@ export function useCart() {
 }
 
 export const MAX_CART_QTY = MAX_QTY;
+
+/** Storefront page for a cart line. */
+export const lineHref = (l: Pick<CartLine, "type" | "slug">) => (l.slug ? (l.type === "combo" ? `/combo/${l.slug}` : `/product/${l.slug}`) : "#");

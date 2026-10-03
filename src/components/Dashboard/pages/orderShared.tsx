@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye } from "lucide-react";
+import { Eye, Trash } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import type { AdminOrder, AdminOrderListItem, OrderStatus, PaymentStatus } from "@/lib/backend-types";
 import { PAYMENT_METHOD_LABELS } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
 import { useApiAction } from "../api";
 import { formatBDT } from "../format";
-import { EmptyState, ErrorBox, Pager, SearchBox, Spinner, StatusPill, selectClass } from "../ui";
+import { EmptyState, ErrorBox, Pager, SearchBox, Spinner, StatusPill, selectClass, useConfirm } from "../ui";
 
 export { PAYMENT_METHOD_LABELS };
 
@@ -84,6 +85,23 @@ export function OrdersTable({
   onRetry: () => void;
   emptyText?: string;
 }) {
+  const { hasPermission } = useAuth();
+  const confirm = useConfirm();
+  const action = useApiAction();
+  const canDelete = hasPermission("orders.delete");
+
+  const removeOrder = async (o: AdminOrderListItem) => {
+    const ok = await confirm({
+      title: "Delete order?",
+      text: `Are you sure you want to delete order "${o.orderNumber}"? Stock and coupons will be restored (if applicable). This cannot be undone.`,
+      confirmText: "Yes, Delete Order",
+    });
+    if (ok) {
+      const res = await action(`/admin/orders/${o._id}`, { method: "DELETE" }, "Order deleted successfully");
+      if (res) onRetry();
+    }
+  };
+
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs">
       {loading && !orders ? (
@@ -105,7 +123,7 @@ export function OrdersTable({
                 <th className="px-4 py-3.5">Total</th>
                 <th className="px-4 py-3.5">Payment</th>
                 <th className="px-4 py-3.5">Status</th>
-                <th className="px-6 py-3.5 text-right">View</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -142,9 +160,20 @@ export function OrdersTable({
                     <StatusPill value={o.orderStatus} />
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Link href={`${BASE}/orders/${o._id}`} className="inline-block p-1.5 text-slate-400 transition hover:text-blue-600">
-                      <Eye className="h-4 w-4" />
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`${BASE}/orders/${o._id}`} title="View order" className="p-1.5 text-slate-400 transition hover:text-blue-600">
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      {canDelete && (
+                        <button
+                          onClick={() => removeOrder(o)}
+                          title="Delete order"
+                          className="cursor-pointer p-1.5 text-slate-400 transition hover:text-rose-600"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

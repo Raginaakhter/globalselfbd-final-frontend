@@ -87,9 +87,8 @@ export default function DeliveryPromise() {
       <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200 shadow-sm p-6 sm:p-10">
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-brand-100/60 blur-3xl" />
 
-        <div className="relative flex items-center justify-between flex-wrap gap-2 mb-6 sm:mb-8">
+        <div className="relative mb-6 sm:mb-8">
           <h2 className="text-xl sm:text-2xl font-black text-navy-700 tracking-tight">Shopping with us, made simple</h2>
-          <p className="text-xs sm:text-sm text-slate-400 font-medium">যা কিছু জানা দরকার, এক নজরে</p>
         </div>
 
         <div className="relative grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

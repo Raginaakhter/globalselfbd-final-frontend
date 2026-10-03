@@ -6,6 +6,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import CartDrawer from "@/components/shop/CartDrawer";
+import WhatsAppWidget from "@/components/landing/WhatsAppWidget";
 import { Toaster } from "sonner";
 import { SiteProvider } from "@/context/SiteContext";
 import { fetchSite } from "@/lib/site-fetch";
@@ -77,17 +78,18 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${hindSiliguri.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col font-sans bg-[#f5f8fc] text-slate-900 selection:bg-brand-500 selection:text-white" suppressHydrationWarning>
-          <AuthProvider>
-            <SiteProvider value={site}>
+        <AuthProvider>
+          <SiteProvider value={site}>
             <WishlistProvider>
-            <CartProvider>
-              {children}
-              <CartDrawer />
-            </CartProvider>
+              <CartProvider>
+                {children}
+                <CartDrawer />
+                <WhatsAppWidget />
+              </CartProvider>
             </WishlistProvider>
-            </SiteProvider>
-            <Toaster position="top-right" richColors closeButton />
-          </AuthProvider>
+          </SiteProvider>
+          <Toaster position="top-right" richColors closeButton />
+        </AuthProvider>
       </body>
     </html>
   );

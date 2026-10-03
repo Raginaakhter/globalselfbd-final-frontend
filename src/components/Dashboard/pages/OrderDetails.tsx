@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, CreditCard, FileText, MapPin, Package, UserRound } from "lucide-react";
+import { ArrowLeft, CreditCard, FileText, MapPin, Package, Trash, UserRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import type { AdminOrder, Invoice, InvoiceListItem, OrderStatus, PaymentStatus } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
@@ -72,6 +72,25 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     setBusy(false);
   };
   const canInvoice = !cancelledOrder(o) && (hasPermission("invoices.create") || hasPermission("invoices.view"));
+  const canDelete = hasPermission("orders.delete");
+
+  const deleteOrder = async () => {
+    const ok = await confirm({
+      title: "Delete order?",
+      text: `Are you sure you want to permanently delete order "${o.orderNumber}"? Stock and coupons will be restored (if applicable). This cannot be undone.`,
+      confirmText: "Yes, Delete Order",
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await api(`/admin/orders/${o._id}`, { method: "DELETE" });
+      toast.success("Order deleted successfully");
+      router.push(`${BASE}/orders`);
+    } catch (err) {
+      toast.error(errorMessage(err, "Failed to delete order"));
+      setBusy(false);
+    }
+  };
 
   const nextStatuses = hasPermission("orders.status") ? (o.allowedNextStatuses ?? []) : [];
   const nextPayments = hasPermission("orders.paymentStatus") ? (o.allowedNextPaymentStatuses ?? []) : [];
@@ -100,6 +119,16 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
               className="mr-1 inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
             >
               <FileText className="h-4 w-4" /> Invoice
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={deleteOrder}
+              disabled={busy}
+              title="Delete Order"
+              className="mr-1 inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+            >
+              <Trash className="h-4 w-4" /> Delete
             </button>
           )}
           <StatusPill value={o.orderStatus} />

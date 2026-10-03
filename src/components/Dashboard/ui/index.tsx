@@ -317,6 +317,8 @@ const PILL_STYLES: Record<string, string> = {
   READ: "bg-slate-100 text-slate-600 border-slate-200",
   REPLIED: "bg-emerald-50 text-emerald-700 border-emerald-200",
   SCHEDULED: "bg-sky-50 text-sky-700 border-sky-200",
+  ENDED: "bg-slate-100 text-slate-600 border-slate-200",
+  LIVE: "bg-emerald-50 text-emerald-700 border-emerald-200",
   EXPIRED: "bg-rose-50 text-rose-700 border-rose-200",
   USED_UP: "bg-orange-50 text-orange-700 border-orange-200",
 };

@@ -11,6 +11,7 @@ export type SummaryLine = {
   subtotal: number;
   size?: string | null;
   slug?: string;
+  type?: "product" | "combo";
 };
 
 type Props = {
@@ -35,7 +36,7 @@ export default function OrderSummary({ lines, subtotal, shipping, discount = 0, 
         <ul className="space-y-3 max-h-72 overflow-y-auto pr-1 mb-4">
           {lines.map((l) => (
             <li key={l.key} className="flex items-center gap-3">
-              <Link href={l.slug ? `/product/${l.slug}` : "#"} className="relative w-14 h-14 shrink-0 rounded-xl bg-slate-50 flex items-center justify-center">
+              <Link href={l.slug ? `/${l.type === "combo" ? "combo" : "product"}/${l.slug}` : "#"} className="relative w-14 h-14 shrink-0 rounded-xl bg-slate-50 flex items-center justify-center">
                 <ProductImage image={l.thumbnail} alt={l.title} className="rounded-xl" />
                 <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-navy-700 text-white text-[11px] font-bold flex items-center justify-center">{l.quantity}</span>
               </Link>

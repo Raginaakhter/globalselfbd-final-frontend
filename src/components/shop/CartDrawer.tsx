@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { X, ShoppingBag, Trash2, ArrowRight, Loader2 } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { lineHref, useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/shop";
 import QuantityStepper from "./QuantityStepper";
 import ProductImage from "./ProductImage";
@@ -52,12 +52,12 @@ export default function CartDrawer() {
             <ul className="flex-1 overflow-y-auto divide-y divide-slate-100 px-5">
               {lines.map((l) => (
                 <li key={l.key} className={`py-4 flex gap-3.5 ${l.isAvailable ? "" : "opacity-70"}`}>
-                  <Link href={`/product/${l.slug}`} onClick={closeDrawer} className="w-20 h-20 shrink-0 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden">
+                  <Link href={lineHref(l)} onClick={closeDrawer} className="w-20 h-20 shrink-0 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden">
                     <ProductImage image={l.thumbnail} alt={l.title} />
                   </Link>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <Link href={`/product/${l.slug}`} onClick={closeDrawer} className="text-sm font-bold text-navy-700 leading-snug line-clamp-2 hover:text-brand-700">
+                      <Link href={lineHref(l)} onClick={closeDrawer} className="text-sm font-bold text-navy-700 leading-snug line-clamp-2 hover:text-brand-700">
                         {l.title}
                       </Link>
                       <button onClick={() => removeItem(l.key)} aria-label={`Remove ${l.title}`} className="text-slate-400 hover:text-coral-500 p-1 -mr-1 cursor-pointer">
@@ -65,9 +65,13 @@ export default function CartDrawer() {
                       </button>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
+                      {l.type === "combo" && <span className="mr-1 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-black text-indigo-700">COMBO</span>}
                       {l.size ? `Size ${l.size} · ` : ""}
                       {formatPrice(l.unitPrice)} each
                     </p>
+                    {l.type === "combo" && !!l.comboItems?.length && (
+                      <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{l.comboItems.map((m) => `${m.quantity}× ${m.productTitle}`).join(" + ")}</p>
+                    )}
                     <CartLineIssue line={l} />
                     <div className="mt-2.5 flex items-center justify-between">
                       <QuantityStepper size="sm" value={l.quantity} onChange={(n) => setQty(l.key, n)} />

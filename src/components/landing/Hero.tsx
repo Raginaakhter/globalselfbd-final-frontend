@@ -27,10 +27,17 @@ function Slide({ banner, eager }: { banner: Banner; eager: boolean }) {
   const alt = banner.altText || banner.title || "Banner";
 
   const picture = (
-    <picture>
-      {banner.mobileImageUrl && <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />}
-      <img src={banner.imageUrl} alt={alt} loading={eager ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover object-center" />
-    </picture>
+    <>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-60"
+        style={{ backgroundImage: `url("${banner.imageUrl}")` }}
+      />
+      <picture>
+        {banner.mobileImageUrl && <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />}
+        <img src={banner.imageUrl} alt={alt} loading={eager ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-contain object-center" />
+      </picture>
+    </>
   );
 
   // Image-only banner: the whole slide is the link (when one is set).
@@ -48,7 +55,7 @@ function Slide({ banner, eager }: { banner: Banner; eager: boolean }) {
     <>
       {picture}
       <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/30 to-transparent" />
-      <div className="relative h-full flex items-center px-6 sm:px-12 py-10">
+      <div className="relative h-full flex items-center px-5 sm:px-12 py-6 sm:py-10">
         <div className="max-w-md text-white">
           {banner.subtitle && (
             <span className="inline-block px-3 py-1 rounded-full bg-white/15 border border-white/25 text-[11px] font-bold uppercase tracking-widest mb-4">{banner.subtitle}</span>
@@ -87,11 +94,11 @@ export default function Hero() {
   const go = (dir: number) => setIndex((i) => (i + dir + count) % count);
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
       <div className={count && promoCards.length ? "grid lg:grid-cols-[1fr_300px] gap-4" : ""}>
       {count > 0 && (
       <div
-        className="group relative overflow-hidden rounded-3xl shadow-xl bg-navy-800 aspect-[4/3] sm:aspect-[16/7] lg:aspect-auto lg:min-h-[380px]"
+        className="group relative overflow-hidden rounded-3xl shadow-xl bg-navy-800 aspect-[16/9] lg:aspect-auto lg:min-h-[340px]"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         aria-roledescription="carousel"
@@ -132,7 +139,7 @@ export default function Hero() {
       )}
 
       {promoCards.length > 0 && (
-        <div className={`grid sm:grid-cols-2 gap-4 ${count ? "lg:grid-cols-1" : ""}`}>
+        <div className={`grid gap-4 sm:grid-cols-2 ${count ? "lg:grid-cols-1 lg:auto-rows-fr lg:h-full" : "lg:grid-cols-2"}`}>
           {promoCards.map((b) => (
             <PromoCard key={b._id} banner={b} />
           ))}
@@ -147,19 +154,24 @@ export default function Hero() {
 function PromoCard({ banner }: { banner: Banner }) {
   const hasText = Boolean(banner.title || banner.subtitle || banner.description || banner.buttonText);
   const alt = banner.altText || banner.title || "Promotion";
-  const className = "group relative block overflow-hidden rounded-3xl shadow-lg bg-slate-100 min-h-[150px] lg:min-h-0 hover:-translate-y-1 hover:shadow-xl transition-all duration-300";
+  const className = "group relative block overflow-hidden rounded-3xl shadow-lg bg-slate-100 aspect-[16/9] lg:aspect-auto lg:min-h-[160px] lg:h-full hover:-translate-y-1 hover:shadow-xl transition-all duration-300";
 
   const body = (
     <>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-60"
+        style={{ backgroundImage: `url("${banner.imageUrl}")` }}
+      />
       <picture>
         {banner.mobileImageUrl && <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />}
-        <img src={banner.imageUrl} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <img src={banner.imageUrl} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-105" />
       </picture>
       <span className="shine-sweep" />
       {hasText && (
         <>
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
-          <div className="relative flex h-full min-h-[150px] flex-col justify-between p-6 text-white">
+          <div className="relative flex h-full flex-col justify-between p-5 sm:p-6 text-white">
             <div>
               {banner.subtitle && <p className="text-[11px] font-bold uppercase tracking-widest text-white/80">{banner.subtitle}</p>}
               {banner.title && <h3 className="text-xl font-black leading-tight drop-shadow">{banner.title}</h3>}

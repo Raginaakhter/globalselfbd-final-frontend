@@ -1,7 +1,8 @@
 // Server-side only: storefront data for server components, straight from the public backend API.
 
+import { cache } from "react";
 import type { Pagination, StoreCategory, StoreProduct } from "@/lib/storefront";
-import { EMPTY_FOOTER, type Banner, type Brand, type FooterSettings, type HomepageReview, type ShippingSettings } from "@/lib/backend-types";
+import { EMPTY_FOOTER, type Banner, type Brand, type Combo, type FooterSettings, type HomepageReview, type Offer, type ShippingSettings } from "@/lib/backend-types";
 import { callBackend } from "./backend";
 
 export async function fetchCategoryTree(): Promise<StoreCategory[]> {
@@ -69,3 +70,37 @@ export async function fetchHomepageReviews(limit = 12): Promise<HomepageReview[]
   const { body } = await callBackend<HomepageReview[]>(`/api/reviews/homepage?limit=${limit}`);
   return body.success && Array.isArray(body.data) ? body.data : [];
 }
+
+/* ---------- Combos & offers (public) ---------- */
+
+const toQuery = (q: Record<string, string | number | undefined>) => {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "") params.set(k, String(v));
+  return params.size ? `?${params}` : "";
+};
+
+/** Live combos (ACTIVE + inside their time window). */
+export async function fetchCombos(query: { page?: number; limit?: number; search?: string } = {}): Promise<{ combos: Combo[]; pagination: Pagination | null; error?: string }> {
+  const { body } = await callBackend<Combo[]>(`/api/public/combos${toQuery(query)}`);
+  if (!body.success) return { combos: [], pagination: null, error: body.message };
+  return { combos: Array.isArray(body.data) ? body.data : [], pagination: (body.pagination as Pagination | undefined) ?? null };
+}
+
+/** Single combo by slug (increments views on the backend); null when not live. Cached per request. */
+export const fetchCombo = cache(async (slug: string): Promise<Combo | null> => {
+  const { body } = await callBackend<Combo>(`/api/public/combos/${encodeURIComponent(slug)}`);
+  return body.success && body.data ? body.data : null;
+});
+
+/** Active offers whose window includes now. */
+export async function fetchOffers(query: { page?: number; limit?: number } = {}): Promise<{ offers: Offer[]; pagination: Pagination | null; error?: string }> {
+  const { body } = await callBackend<Offer[]>(`/api/public/offers${toQuery(query)}`);
+  if (!body.success) return { offers: [], pagination: null, error: body.message };
+  return { offers: Array.isArray(body.data) ? body.data : [], pagination: (body.pagination as Pagination | undefined) ?? null };
+}
+
+/** Offer by slug with its in-scope products; null when not found / not live. Cached per request. */
+export const fetchOffer = cache(async (slug: string): Promise<(Omit<Offer, "products"> & { products: StoreProduct[] }) | null> => {
+  const { body } = await callBackend<Omit<Offer, "products"> & { products: StoreProduct[] }>(`/api/public/offers/${encodeURIComponent(slug)}`);
+  return body.success && body.data ? { ...body.data, products: body.data.products ?? [] } : null;
+});
