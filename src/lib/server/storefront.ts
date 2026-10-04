@@ -17,6 +17,7 @@ export interface ProductQuery {
   category?: string;
   sort?: string;
   availability?: string;
+  isPreOrder?: boolean | string;
   minPrice?: number;
   maxPrice?: number;
 }

@@ -29,6 +29,10 @@ export interface StoreProduct {
   thumbnail: string;
   gallery: string[];
   availability: "IN_STOCK" | "OUT_OF_STOCK";
+  /** Sells with no stock requirement; availability is always IN_STOCK. */
+  isPreOrder?: boolean;
+  /** Minimum delivery window promised in days (≥ 15). */
+  preOrderMinDays?: number;
   /** Average of APPROVED reviews */
   rating?: ProductRating;
   createdAt: string;

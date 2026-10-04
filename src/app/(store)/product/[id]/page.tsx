@@ -91,10 +91,17 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               )}
             </div>
 
-            <p className={`mt-3 inline-flex items-center gap-2 text-sm font-bold ${outOfStock ? "text-rose-600" : "text-brand-700"}`}>
-              {outOfStock ? <CircleX className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-              {outOfStock ? "Out of stock" : "In stock — ready to ship"}
-            </p>
+            {product.isPreOrder ? (
+              <p className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-violet-700 bg-violet-50 border border-violet-200 px-3 py-1.5 rounded-xl w-fit">
+                <Truck className="w-4 h-4 text-violet-600" />
+                Pre-Order · Delivery in {product.preOrderMinDays ?? 15}+ days
+              </p>
+            ) : (
+              <p className={`mt-3 inline-flex items-center gap-2 text-sm font-bold ${outOfStock ? "text-rose-600" : "text-brand-700"}`}>
+                {outOfStock ? <CircleX className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                {outOfStock ? "Out of stock" : "In stock — ready to ship"}
+              </p>
+            )}
 
             {product.productDescription && <p className="text-sm text-slate-600 leading-relaxed mt-4 whitespace-pre-line">{product.productDescription}</p>}
 
@@ -123,7 +130,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               ["Category", breadcrumb.map((c) => c.name).join(" › ") || "—"],
               ...(product.sizes.length ? [["Available sizes", product.sizes.join(", ")]] : []),
               ...(pack ? [["Pack size", pack]] : []),
-              ["Availability", outOfStock ? "Out of stock" : "In stock"],
+              ["Availability", product.isPreOrder ? `Pre-Order (ships in ${product.preOrderMinDays ?? 15}+ days)` : outOfStock ? "Out of stock" : "In stock"],
               ["Delivery", `Dhaka ${formatPrice(settings.shippingInsideDhaka)} · Nationwide ${formatPrice(settings.shippingOutsideDhaka)}`],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4 py-2.5">

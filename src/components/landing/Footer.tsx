@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 import Logo from "./Logo";
 import { useSite } from "@/context/SiteContext";
+import { useCategorySidebar } from "@/context/CategorySidebarContext";
 
 function socialBrandClass(label: string) {
   const k = label.toLowerCase();
@@ -59,9 +60,16 @@ function socialIcon(label: string) {
 export default function Footer() {
   const { settings, footerColumns, footerLogoUrl, copyrightText } = useSite();
   const { email, phone, whatsapp, address, socials, tagline, complaintTitle, complaintNote } = settings;
+  // Shift the footer right on desktop so the fixed sidebar never covers it.
+  const { open: sidebarOpen } = useCategorySidebar();
 
   return (
-    <footer id="contact" className="mt-16 bg-navy-800 text-white scroll-mt-32">
+    <footer
+      id="contact"
+      className={`mt-16 bg-navy-800 text-white scroll-mt-32 transition-[padding] duration-300 ease-out ${
+        sidebarOpen ? "lg:pl-72 xl:pl-80" : "lg:pl-0"
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
         <div className="grid gap-10 lg:grid-cols-[1.3fr_repeat(3,1fr)_1.1fr]">
           <div>

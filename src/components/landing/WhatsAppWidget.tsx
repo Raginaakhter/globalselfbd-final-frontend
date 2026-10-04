@@ -16,6 +16,7 @@ export default function WhatsAppWidget() {
   // Delay first paint until after hydration so SSR doesn't flash the widget
   // for users who already dismissed it this session.
   useEffect(() => {
+
     try {
       if (sessionStorage.getItem(CLOSED_KEY) !== "1") setVisible(true);
     } catch {

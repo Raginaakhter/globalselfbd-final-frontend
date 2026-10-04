@@ -1,17 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Banknote, CreditCard, Loader2, Lock, LogIn, MapPin, Smartphone, User } from "lucide-react";
+import { ArrowLeft, Banknote, CreditCard, Loader2, Lock, LogIn, MapPin, Smartphone, Store, Truck, User } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError, useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/shop";
 import { useSite } from "@/context/SiteContext";
-import type { Order, ShippingSettings } from "@/lib/backend-types";
+import type { AdminDiscountType, CheckoutPreview, FulfillmentMethod, Order } from "@/lib/backend-types";
 import OrderSummary from "@/components/shop/OrderSummary";
 import CouponBox, { type AppliedCoupon } from "@/components/shop/CouponBox";
+import { PreOrderNotice } from "@/components/orders/StatusTimeline";
 
 type Zone = "dhaka" | "outside";
 type Form = { name: string; phone: string; email: string; address: string; city: string; area: string; note: string };
@@ -65,27 +66,67 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [placing, setPlacing] = useState(false);
   const { settings } = useSite();
-  const [quote, setQuote] = useState<{ key: string; charge: number } | null>(null);
   // Coupon checked by the backend for this cart subtotal
   const [coupon, setCoupon] = useState<(AppliedCoupon & { subtotal: number }) | null>(null);
   const discount = coupon?.discount ?? 0;
 
-  // Exact charge for this city and subtotal from the backend (the same rule it uses when the order is placed).
-  const quoteCity = zone === "dhaka" ? "Dhaka" : form.city.trim();
-  const quoteKey = `${quoteCity}|${cart.subtotal - discount}`;
+  // Fulfillment + admin discount — admin fields are gated on canUseAdminDiscount from the preview response.
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<FulfillmentMethod>("DELIVERY");
+  const [adminDiscountType, setAdminDiscountType] = useState<AdminDiscountType>("PERCENTAGE");
+  const [adminDiscountValue, setAdminDiscountValue] = useState<string>("");
+  const [preview, setPreview] = useState<CheckoutPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const canUseAdminDiscount = preview?.canUseAdminDiscount ?? false;
+
+  const parsedAdminValue = useMemo(() => {
+    if (!canUseAdminDiscount) return 0;
+    const n = Number(adminDiscountValue);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    if (adminDiscountType === "PERCENTAGE") return Math.min(100, n);
+    return n;
+  }, [canUseAdminDiscount, adminDiscountValue, adminDiscountType]);
+
+  // Live preview from the backend. Debounced so each keystroke doesn't fire a request.
+  const previewKey = `${cart.subtotal}|${coupon?.code ?? ""}|${fulfillmentMethod}|${zone}|${form.city.trim()}|${form.area.trim()}|${form.address.trim()}|${adminDiscountType}|${parsedAdminValue}`;
   useEffect(() => {
-    if (!quoteCity) return;
+    if (!isAuthenticated || cart.lines.length === 0) {
+      setPreview(null);
+      return;
+    }
     let cancelled = false;
     const id = setTimeout(() => {
-      api<ShippingSettings>(`/public/shipping?city=${encodeURIComponent(quoteCity)}&subtotal=${cart.subtotal - discount}`)
-        .then((res) => !cancelled && res.data.quote && setQuote({ key: quoteKey, charge: res.data.quote.charge }))
-        .catch(() => {});
+      const body = {
+        customerName: form.name.trim() || user?.name || "",
+        phoneNumber: form.phone.replace(/[\s-]/g, "") || "01700000000",
+        email: form.email.trim() || undefined,
+        shippingAddress: form.address.trim() || "pending",
+        city: zone === "dhaka" ? "Dhaka" : (form.city.trim() || "Dhaka"),
+        area: form.area.trim() || "pending",
+        paymentMethod: "CASH_ON_DELIVERY" as const,
+        fulfillmentMethod,
+        couponCode: coupon?.code,
+        ...(canUseAdminDiscount && parsedAdminValue > 0
+          ? { adminDiscountType, adminDiscountValue: parsedAdminValue }
+          : {}),
+      };
+      api<CheckoutPreview>("/orders/checkout", { method: "POST", body: JSON.stringify(body) })
+        .then((res) => {
+          if (cancelled) return;
+          setPreview(res.data);
+          setPreviewError(null);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setPreview(null);
+          setPreviewError(err instanceof ApiError ? err.message : "Could not calculate checkout totals.");
+        });
     }, 300);
     return () => {
       cancelled = true;
       clearTimeout(id);
     };
-  }, [api, quoteCity, quoteKey, cart.subtotal, discount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewKey, isAuthenticated]);
 
   const checkCoupon = async (code: string): Promise<string | null> => {
     try {
@@ -150,8 +191,11 @@ export default function CheckoutPage() {
     );
   }
 
+  // Prefer the backend-calculated shipping. Fall back to the local-rate estimate while the first preview is in flight.
   const rate = zone === "dhaka" ? settings.shippingInsideDhaka : settings.shippingOutsideDhaka;
-  const shipping = quote?.key === quoteKey ? quote.charge : rate;
+  const shipping = preview ? preview.shippingCost : fulfillmentMethod === "STORE_PICKUP" ? 0 : rate;
+  const adminDiscountAmount = preview?.adminDiscount?.amount ?? 0;
+  const totalAmount = preview?.totalAmount ?? Math.max(0, cart.subtotal - discount - adminDiscountAmount + shipping);
   const available = cart.lines.filter((l) => l.isAvailable);
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
@@ -185,7 +229,12 @@ export default function CheckoutPage() {
           area: form.area.trim(),
           orderNotes: form.note.trim() || undefined,
           paymentMethod: "CASH_ON_DELIVERY",
+          fulfillmentMethod,
           couponCode: coupon?.code,
+          // Admin fields only — backend returns 403 if a non-admin sends them.
+          ...(canUseAdminDiscount && parsedAdminValue > 0
+            ? { adminDiscountType, adminDiscountValue: parsedAdminValue }
+            : {}),
         }),
       });
       // The backend empties the cart when the order is created.
@@ -235,9 +284,40 @@ export default function CheckoutPage() {
           <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-5 sm:p-7">
             <h2 className="flex items-center gap-2.5 text-lg font-black text-navy-700 mb-5">
               <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center">
+                <Truck className="w-4 h-4" />
+              </span>
+              Fulfillment method
+            </h2>
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {(
+                [
+                  { v: "DELIVERY", icon: Truck, t: "Delivery", s: "We bring it to your address" },
+                  { v: "STORE_PICKUP", icon: Store, t: "Buy from Store", s: "No delivery charge · Pick up in store" },
+                ] as const
+              ).map(({ v, icon: Icon, t, s }) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setFulfillmentMethod(v)}
+                  aria-pressed={fulfillmentMethod === v}
+                  className={`text-left rounded-2xl border-2 p-4 transition-all cursor-pointer flex items-start gap-3 ${
+                    fulfillmentMethod === v ? "border-brand-600 bg-brand-50" : "border-slate-200 hover:border-brand-300"
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 mt-0.5 ${fulfillmentMethod === v ? "text-brand-700" : "text-slate-500"}`} />
+                  <div>
+                    <span className="block text-sm font-black text-navy-700">{t}</span>
+                    <span className="block text-xs text-slate-500 mt-0.5">{s}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <h2 className="flex items-center gap-2.5 text-lg font-black text-navy-700 mb-5">
+              <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center">
                 <MapPin className="w-4 h-4" />
               </span>
-              Delivery address
+              {fulfillmentMethod === "STORE_PICKUP" ? "Contact address" : "Delivery address"}
             </h2>
             <div className="grid grid-cols-2 gap-3 mb-4">
               {(
@@ -251,7 +331,8 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={() => setZone(z.v)}
                   aria-pressed={zone === z.v}
-                  className={`text-left rounded-2xl border-2 p-4 transition-all cursor-pointer ${zone === z.v ? "border-brand-600 bg-brand-50" : "border-slate-200 hover:border-brand-300"}`}
+                  disabled={fulfillmentMethod === "STORE_PICKUP"}
+                  className={`text-left rounded-2xl border-2 p-4 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${zone === z.v ? "border-brand-600 bg-brand-50" : "border-slate-200 hover:border-brand-300"}`}
                 >
                   <span className="block text-sm font-black text-navy-700">{z.t}</span>
                   <span className="block text-xs text-slate-500 mt-0.5">{z.s}</span>
@@ -310,6 +391,45 @@ export default function CheckoutPage() {
               ))}
             </div>
           </section>
+
+          {canUseAdminDiscount && (
+            <section className="rounded-3xl bg-white border-2 border-dashed border-indigo-300 shadow-sm p-5 sm:p-7">
+              <h2 className="flex items-center gap-2.5 text-lg font-black text-indigo-700 mb-1">
+                Admin discount
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 uppercase tracking-wider">Staff only</span>
+              </h2>
+              <p className="text-xs text-slate-500 mb-5">Applied after the coupon discount. The backend recomputes and enforces the limits.</p>
+              <div className="grid sm:grid-cols-[180px_1fr] gap-4">
+                <Field label="Discount type">
+                  <select
+                    value={adminDiscountType}
+                    onChange={(e) => setAdminDiscountType(e.target.value as AdminDiscountType)}
+                    className={inputCls()}
+                  >
+                    <option value="PERCENTAGE">Percentage (%)</option>
+                    <option value="FIXED">Fixed Amount (৳)</option>
+                  </select>
+                </Field>
+                <Field label={adminDiscountType === "PERCENTAGE" ? "Percent (0-100)" : "Taka amount"}>
+                  <input
+                    type="number"
+                    min={0}
+                    max={adminDiscountType === "PERCENTAGE" ? 100 : undefined}
+                    step={adminDiscountType === "PERCENTAGE" ? 0.1 : 1}
+                    value={adminDiscountValue}
+                    onChange={(e) => setAdminDiscountValue(e.target.value)}
+                    placeholder={adminDiscountType === "PERCENTAGE" ? "e.g. 10" : "e.g. 500"}
+                    className={inputCls()}
+                  />
+                </Field>
+              </div>
+              {adminDiscountAmount > 0 && (
+                <p className="mt-3 text-sm font-bold text-indigo-700">
+                  Discount applied: − {formatPrice(adminDiscountAmount)}
+                </p>
+              )}
+            </section>
+          )}
         </div>
 
         <div className="lg:sticky lg:top-40">
@@ -318,8 +438,13 @@ export default function CheckoutPage() {
             subtotal={cart.subtotal}
             shipping={shipping}
             discount={discount}
+            adminDiscount={adminDiscountAmount}
+            fulfillmentLabel={fulfillmentMethod === "STORE_PICKUP" ? "Store Pickup" : undefined}
+            total={totalAmount}
           >
             <CouponBox applied={coupon} onApply={checkCoupon} onRemove={() => setCoupon(null)} disabled={placing} />
+            {preview?.isPreOrder && <PreOrderNotice minDays={preview.preOrderMinDays} expectedDeliveryDate={preview.expectedDeliveryDate} className="mt-4" />}
+            {previewError && <p className="mt-3 text-xs font-semibold text-rose-600">{previewError}</p>}
             <button
               type="submit"
               disabled={placing || cart.loading || couponStale}
@@ -331,7 +456,7 @@ export default function CheckoutPage() {
                 </>
               ) : (
                 <>
-                  <Lock className="w-4 h-4" /> Place Order — {formatPrice(cart.subtotal - discount + shipping)}
+                  <Lock className="w-4 h-4" /> Place Order — {formatPrice(totalAmount)}
                 </>
               )}
             </button>

@@ -9,10 +9,10 @@ import { ShieldCheck, ArrowLeft, Loader2, Globe, RefreshCw } from "lucide-react"
 function VerifyOtpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const emailParam = searchParams.get("email") || "";
+  const phoneParam = searchParams.get("phone") || "";
 
   const { verifyOtp, forgotPassword } = useAuth();
-  const [email, setEmail] = useState(emailParam);
+  const [phoneNumber, setPhoneNumber] = useState(phoneParam);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -68,8 +68,8 @@ function VerifyOtpForm() {
     e.preventDefault();
     const fullOtp = otp.join("");
 
-    if (!email) {
-      alert("Email address is missing. Please start from Forgot Password.");
+    if (!phoneNumber) {
+      alert("Phone number is missing. Please start from Forgot Password.");
       router.push("/forgot-password");
       return;
     }
@@ -79,21 +79,20 @@ function VerifyOtpForm() {
     }
 
     setLoading(true);
-    const resetToken = await verifyOtp(email, fullOtp);
+    const resetToken = await verifyOtp(phoneNumber, fullOtp);
     setLoading(false);
 
     if (resetToken) {
-      // Store token safely or pass via query parameter to Reset Password page
       sessionStorage.setItem("resetToken", resetToken);
       router.push(`/reset-password?token=${encodeURIComponent(resetToken)}`);
     }
   };
 
   const handleResendOtp = async () => {
-    if (cooldown > 0 || !email) return;
+    if (cooldown > 0 || !phoneNumber) return;
 
     setResendLoading(true);
-    const success = await forgotPassword(email);
+    const success = await forgotPassword(phoneNumber);
     setResendLoading(false);
 
     if (success) {
@@ -122,25 +121,26 @@ function VerifyOtpForm() {
         </div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Enter Verification Code</h1>
         <p className="text-sm text-slate-500 mt-1">
-          We have sent a 6-digit code to <span className="font-semibold text-slate-800">{email || "your email"}</span>
+          We&apos;ve sent a 6-digit code to <span className="font-semibold text-slate-800">{phoneNumber || "your phone"}</span>
         </p>
       </div>
 
       {/* Main Form Card */}
       <div className="auth-card auth-card-hover rounded-3xl p-8 shadow-xl">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email input if missing */}
-          {!emailParam && (
+          {/* Phone input if missing */}
+          {!phoneParam && (
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Email Address
+                Phone Number
               </label>
               <input
-                type="email"
+                type="tel"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                inputMode="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="01712345678"
                 className="auth-input pl-4"
               />
             </div>
@@ -207,7 +207,7 @@ function VerifyOtpForm() {
             className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Change email address</span>
+            <span>Change phone number</span>
           </Link>
         </div>
       </div>

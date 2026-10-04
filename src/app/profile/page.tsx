@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import AccountHeader from "@/components/account/AccountHeader";
 import AccountPanel, { AvatarPicker } from "@/components/account/AccountPanel";
-import { StatusBadge } from "@/components/orders/StatusTimeline";
+import { PreOrderBadge, StatusBadge } from "@/components/orders/StatusTimeline";
+import { formatShortDate } from "@/lib/order-status";
 import { formatPrice } from "@/lib/shop";
 import type { OrderListItem } from "@/lib/backend-types";
 import ProductImage from "@/components/shop/ProductImage";
@@ -167,11 +168,15 @@ function ProfileContent() {
                         <p className="text-sm font-bold text-slate-900 flex items-center gap-2 flex-wrap">
                           {o.orderNumber}
                           <StatusBadge status={o.orderStatus} />
+                          {o.isPreOrder && <PreOrderBadge />}
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           {o.firstItem?.productTitle ?? "Order"}
                           {o.itemCount > 1 ? ` + ${o.itemCount - 1} more` : ""} · {new Date(o.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                         </p>
+                        {o.isPreOrder && o.expectedDeliveryDate && o.orderStatus !== "CANCELLED" && o.orderStatus !== "DELIVERED" && (
+                          <p className="text-[11px] font-semibold text-violet-700 mt-0.5">Expected delivery: {formatShortDate(o.expectedDeliveryDate)}</p>
+                        )}
                       </div>
                       <div className="text-right shrink-0 flex items-center gap-2">
                         <span className="text-sm font-black text-slate-900">{formatPrice(o.totalAmount)}</span>

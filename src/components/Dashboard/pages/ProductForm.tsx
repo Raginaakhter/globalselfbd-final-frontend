@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CalendarClock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import type { Product, ProductOptions } from "@/lib/backend-types";
+import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
 import { useApiAction, useApiQuery } from "../api";
 import { ErrorBox, FieldError, PrimaryButton, Spinner, Toggle, inputClass, labelClass } from "../ui";
@@ -29,6 +30,8 @@ interface FormState {
   thumbnail: string;
   gallery: string[];
   status: "ACTIVE" | "INACTIVE";
+  isPreOrder: boolean;
+  preOrderMinDays: string;
 }
 
 const toForm = (p?: Product | null): FormState => ({
@@ -47,6 +50,8 @@ const toForm = (p?: Product | null): FormState => ({
   thumbnail: p?.thumbnail ?? "",
   gallery: p?.gallery ?? [],
   status: p?.status ?? "ACTIVE",
+  isPreOrder: p?.isPreOrder ?? false,
+  preOrderMinDays: p?.isPreOrder && p.preOrderMinDays ? String(p.preOrderMinDays) : String(PRE_ORDER_MIN_DAYS),
 });
 
 export default function ProductForm({ productId }: { productId?: string }) {
@@ -93,6 +98,11 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
     }
     if (!!form.unit !== !!form.quantity.trim()) e.quantity = "Unit and quantity go together";
     if (form.isFabric && !form.sizes.length && !(form.unit && form.quantity)) e.sizes = "Fabric products need sizes or a unit + quantity";
+    if (form.isPreOrder) {
+      const d = num(form.preOrderMinDays);
+      if (d == null || !Number.isInteger(d) || d < PRE_ORDER_MIN_DAYS || d > PRE_ORDER_MAX_DAYS)
+        e.preOrderMinDays = `Pre-order days must be a whole number between ${PRE_ORDER_MIN_DAYS} and ${PRE_ORDER_MAX_DAYS}`;
+    }
     if (!form.thumbnail) e.thumbnail = "Upload a thumbnail";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -114,6 +124,9 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
       thumbnail: form.thumbnail,
       gallery: form.gallery,
       status: form.status,
+      isPreOrder: form.isPreOrder,
+      // Backend resets days to 0 when pre-order is off; send it explicitly to keep things in sync
+      preOrderMinDays: form.isPreOrder ? Number(form.preOrderMinDays) : 0,
     };
     if (form.slug.trim()) body.slug = form.slug.trim();
     if (form.productCost.trim()) body.productCost = Number(form.productCost);
@@ -243,6 +256,31 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
               <option value="ACTIVE">Active (visible in the store)</option>
               <option value="INACTIVE">Inactive (hidden)</option>
             </select>
+          </section>
+          <section className={`${card} ${form.isPreOrder ? "border-violet-200 bg-gradient-to-br from-violet-50 to-white" : ""}`}>
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                <CalendarClock className={`h-4 w-4 ${form.isPreOrder ? "text-violet-600" : "text-slate-400"}`} /> Pre-order
+              </h2>
+              <Toggle checked={form.isPreOrder} onChange={(v) => set("isPreOrder", v)} color="peer-checked:bg-violet-600" />
+            </div>
+            <p className="text-xs text-slate-500">
+              When on, the product sells with no stock requirement and stock is not deducted. Customers see a Pre-Order badge and an expected delivery date.
+            </p>
+            {form.isPreOrder &&
+              field(
+                `Minimum delivery days (${PRE_ORDER_MIN_DAYS}–${PRE_ORDER_MAX_DAYS}) *`,
+                "preOrderMinDays",
+                <input
+                  type="number"
+                  min={PRE_ORDER_MIN_DAYS}
+                  max={PRE_ORDER_MAX_DAYS}
+                  step={1}
+                  className={inputClass}
+                  value={form.preOrderMinDays}
+                  onChange={text("preOrderMinDays")}
+                />
+              )}
           </section>
           <section className={card}>
             <h2 className="text-sm font-extrabold text-slate-900">Images</h2>

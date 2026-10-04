@@ -4,7 +4,9 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { User as UserIcon, Mail, Lock, Eye, EyeOff, Loader2, Globe, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { User as UserIcon, Phone, Lock, Eye, EyeOff, Loader2, Globe, ShieldCheck, CheckCircle2 } from "lucide-react";
+
+const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
 
 function RegisterForm() {
   const router = useRouter();
@@ -13,7 +15,7 @@ function RegisterForm() {
 
   const { register } = useAuth();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -40,6 +42,12 @@ function RegisterForm() {
       return;
     }
 
+    const cleanedPhone = phoneNumber.replace(/[\s-]/g, "");
+    if (!BD_PHONE.test(cleanedPhone)) {
+      setErrorMsg("Enter a valid Bangladeshi mobile number (e.g. 01712345678).");
+      return;
+    }
+
     if (!passwordOk) {
       setErrorMsg("Password must be at least 6 characters.");
       return;
@@ -51,7 +59,7 @@ function RegisterForm() {
     }
 
     setLoading(true);
-    const success = await register(name.trim(), email.trim(), password, confirmPassword);
+    const success = await register(name.trim(), cleanedPhone, password, confirmPassword);
     setLoading(false);
 
     if (success) {
@@ -109,24 +117,27 @@ function RegisterForm() {
             </div>
           </div>
 
-          {/* Email Address */}
+          {/* Phone Number */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Email Address
+              Phone Number
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Mail className="w-5 h-5" />
+                <Phone className="w-5 h-5" />
               </div>
               <input
-                type="email"
+                type="tel"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="01712345678"
                 className="auth-input"
               />
             </div>
+            <p className="text-[11px] mt-1.5 text-slate-500">We&apos;ll send order updates and verification codes to this number.</p>
           </div>
 
           {/* Password */}

@@ -26,7 +26,7 @@ export type SiteSettings = {
 export type TrustBadge = { title: string; body: string; emoji: string };
 
 /** Top navigation entry. When `children` is set, the header renders it as a dropdown. */
-export type NavLink = { label: string; href: string; hot?: boolean; children?: { label: string; href: string }[] };
+export type NavLink = { label: string; href: string; hot?: boolean; badge?: string; children?: { label: string; href: string }[] };
 
 export type FooterColumn = { title: string; links: { label: string; href: string }[] };
 

@@ -4,25 +4,25 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Mail, ArrowLeft, Loader2, Globe, KeyRound } from "lucide-react";
+import { Phone, ArrowLeft, Loader2, Globe, KeyRound } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { forgotPassword } = useAuth();
-  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    const cleaned = phoneNumber.replace(/[\s-]/g, "");
+    if (!cleaned) return;
 
     setLoading(true);
-    const success = await forgotPassword(email);
+    const success = await forgotPassword(cleaned);
     setLoading(false);
 
     if (success) {
-      // Redirect to OTP verification page with email parameter
-      router.push(`/verify-otp?email=${encodeURIComponent(email)}`);
+      router.push(`/verify-otp?phone=${encodeURIComponent(cleaned)}`);
     }
   };
 
@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Forgot Password?</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Enter your registered email address and we&apos;ll send you a 6-digit verification code.
+            Enter your registered phone number and we&apos;ll send you a 6-digit verification code by SMS.
           </p>
         </div>
 
@@ -55,18 +55,20 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Email Address
+                Phone Number
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-5 h-5" />
+                  <Phone className="w-5 h-5" />
                 </div>
                 <input
-                  type="email"
+                  type="tel"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="01712345678"
                   className="auth-input"
                 />
               </div>

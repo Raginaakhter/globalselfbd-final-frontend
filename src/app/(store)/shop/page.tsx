@@ -99,6 +99,14 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
                   <span>🛍️</span> All products
                 </Link>
               </li>
+              <li className="shrink-0">
+                <Link
+                  href="/pre-order"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200"
+                >
+                  <span>📦</span> Pre-Orders
+                </Link>
+              </li>
               {renderTree(categories)}
             </ul>
           </div>

@@ -4,7 +4,7 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Mail, Lock, Eye, EyeOff, Loader2, Globe, ShieldCheck, ArrowRight } from "lucide-react";
+import { Phone, Lock, Eye, EyeOff, Loader2, Globe, ShieldCheck, ArrowRight } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -12,7 +12,7 @@ function LoginForm() {
   const redirectPath = searchParams.get("redirect") || "/";
 
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,13 +22,13 @@ function LoginForm() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!email || !password) {
-      setErrorMsg("Please enter both email and password.");
+    if (!identifier || !password) {
+      setErrorMsg("Please enter your phone number (or email) and password.");
       return;
     }
 
     setLoading(true);
-    const success = await login(email, password);
+    const success = await login(identifier, password);
     setLoading(false);
 
     if (success) {
@@ -66,24 +66,27 @@ function LoginForm() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email Field */}
+          {/* Phone (or email for staff / legacy accounts) */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Email Address
+              Phone Number
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Mail className="w-5 h-5" />
+                <Phone className="w-5 h-5" />
               </div>
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                inputMode="tel"
+                autoComplete="username"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="01712345678"
                 className="auth-input"
               />
             </div>
+            <p className="text-[11px] mt-1.5 text-slate-500">Staff / admin accounts can also sign in with an email address.</p>
           </div>
 
           {/* Password Field */}

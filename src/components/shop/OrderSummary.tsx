@@ -19,14 +19,18 @@ type Props = {
   subtotal: number;
   shipping?: number; // undefined => "calculated at checkout"
   discount?: number;
-  /** Total from the backend; falls back to subtotal + shipping - discount. */
+  /** Admin-only extra discount shown as its own row when > 0. */
+  adminDiscount?: number;
+  /** When set, renders a label above the Delivery row (e.g. "Buy from Store"). */
+  fulfillmentLabel?: string;
+  /** Total from the backend; falls back to subtotal + shipping - discount - adminDiscount. */
   total?: number;
   children?: React.ReactNode;
   showItems?: boolean;
 };
 
-export default function OrderSummary({ lines, subtotal, shipping, discount = 0, total, children, showItems = true }: Props) {
-  const grandTotal = total ?? subtotal + (shipping ?? 0) - discount;
+export default function OrderSummary({ lines, subtotal, shipping, discount = 0, adminDiscount = 0, fulfillmentLabel, total, children, showItems = true }: Props) {
+  const grandTotal = total ?? Math.max(0, subtotal + (shipping ?? 0) - discount - adminDiscount);
 
   return (
     <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-5 sm:p-6">
@@ -61,10 +65,22 @@ export default function OrderSummary({ lines, subtotal, shipping, discount = 0, 
             <dd className="font-bold text-brand-700">− {formatPrice(discount)}</dd>
           </div>
         )}
+        {adminDiscount > 0 && (
+          <div className="flex justify-between">
+            <dt className="text-slate-600">Admin discount</dt>
+            <dd className="font-bold text-indigo-700">− {formatPrice(adminDiscount)}</dd>
+          </div>
+        )}
         <div className="flex justify-between">
-          <dt className="text-slate-600">Delivery</dt>
+          <dt className="text-slate-600">{fulfillmentLabel ? `Delivery (${fulfillmentLabel})` : "Delivery"}</dt>
           <dd className="font-bold text-navy-700">
-            {shipping === undefined ? <span className="text-slate-500 font-medium">At checkout</span> : formatPrice(shipping)}
+            {shipping === undefined ? (
+              <span className="text-slate-500 font-medium">At checkout</span>
+            ) : shipping === 0 ? (
+              <span className="text-emerald-600">Free</span>
+            ) : (
+              formatPrice(shipping)
+            )}
           </dd>
         </div>
         <div className="flex justify-between items-baseline border-t border-slate-100 pt-3">

@@ -146,9 +146,25 @@ export default function OrderSuccessPage({ params }: { params: Promise<{ id: str
                 <dt className="text-slate-600">Subtotal</dt>
                 <dd className="font-bold">{formatPrice(order.subtotal)}</dd>
               </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-slate-600">{order.couponCode ? `Coupon (${order.couponCode})` : "Discount"}</dt>
+                  <dd className="font-bold text-brand-700">− {formatPrice(order.discount)}</dd>
+                </div>
+              )}
+              {(order.adminDiscountAmount ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-slate-600">Admin discount</dt>
+                  <dd className="font-bold text-indigo-700">− {formatPrice(order.adminDiscountAmount ?? 0)}</dd>
+                </div>
+              )}
               <div className="flex justify-between">
-                <dt className="text-slate-600">Delivery</dt>
-                <dd className="font-bold">{formatPrice(order.shippingCost)}</dd>
+                <dt className="text-slate-600">
+                  {order.fulfillmentMethod === "STORE_PICKUP" ? "Delivery (Store Pickup)" : "Delivery"}
+                </dt>
+                <dd className="font-bold">
+                  {order.shippingCost === 0 ? <span className="text-emerald-600">Free</span> : formatPrice(order.shippingCost)}
+                </dd>
               </div>
               <div className="flex justify-between items-baseline pt-2">
                 <dt className="font-black text-navy-700">Total to pay</dt>

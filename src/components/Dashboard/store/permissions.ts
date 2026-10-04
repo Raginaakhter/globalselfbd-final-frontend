@@ -2,6 +2,7 @@ import {
   History,
   Truck,
   BadgeCheck,
+  CalendarClock,
   GalleryHorizontal,
   Layers,
   Megaphone,
@@ -32,6 +33,7 @@ export type ModuleKey =
   | "combos"
   | "offers"
   | "orders"
+  | "pre-orders"
   | "payments"
   | "invoices"
   | "users"
@@ -68,6 +70,7 @@ export const MODULES: ModuleDef[] = [
   { key: "combos", title: "Combos", path: `${BASE}/combos`, icon: Layers, section: "main", viewAny: ["combos.view"], editAny: ["combos.create", "combos.update", "combos.delete"] },
   { key: "offers", title: "Offers", path: `${BASE}/offers`, icon: Megaphone, section: "main", viewAny: ["offers.view"], editAny: ["offers.create", "offers.update", "offers.delete"] },
   { key: "orders", title: "Orders", path: `${BASE}/orders`, icon: ListOrdered, section: "main", menuKey: "orders", editAny: ["orders.status", "orders.paymentStatus", "orders.delete"] },
+  { key: "pre-orders", title: "Pre-Orders", path: `${BASE}/pre-orders`, icon: CalendarClock, section: "main", viewAny: ["orders.viewAll", "orders.viewOwn", "orders.viewAssigned"], editAny: ["orders.update", "orders.status", "orders.delete"] },
   { key: "payments", title: "Payments", path: `${BASE}/payments`, icon: CreditCard, section: "main", menuKey: "payments", editAny: ["orders.paymentStatus"] },
   { key: "invoices", title: "Invoices", path: `${BASE}/invoices`, icon: FileText, section: "main", menuKey: "invoices", editAny: ["invoices.create"] },
   { key: "users", title: "Users", path: `${BASE}/users`, icon: Users, section: "main", menuKey: "users", editAny: ["users.create", "users.update", "users.delete", "users.changeRole"] },
@@ -94,7 +97,11 @@ export function moduleForPath(pathname: string): ModuleDef | undefined {
 export const requiresEdit = (pathname: string) => /\/products\/(add|edit)(\/|$)/.test(pathname);
 
 /** Access level from the backend session: the menu grants the page, permissions grant changes. */
-export function levelFor(mod: ModuleDef, menuKeys: Set<string>, permissions: Set<string>): AccessLevel {
+export function levelFor(mod: ModuleDef, menuKeys: Set<string>, permissions: Set<string>, role?: string): AccessLevel {
+  const r = (role || "").toLowerCase();
+  if (r === "admin" || r === "superadmin" || permissions.has("*") || permissions.has("all")) {
+    return "edit";
+  }
   const canView = mod.menuKey ? menuKeys.has(mod.menuKey) : (mod.viewAny ?? []).some((p) => permissions.has(p));
   if (!canView) return "none";
   return mod.editAny.some((p) => permissions.has(p)) ? "edit" : "view";

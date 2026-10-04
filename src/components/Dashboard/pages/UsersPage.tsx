@@ -127,7 +127,7 @@ export default function UsersPage() {
                               {u.fullName} {self && <span className="text-[10px] font-semibold text-slate-400">(you)</span>}
                             </span>
                             <span className="truncate text-slate-500">{u.email}</span>
-                            {u.phone && <span className="truncate text-slate-400">{u.phone}</span>}
+                            {(u.phoneNumber || u.phone) && <span className="truncate text-slate-400">{u.phoneNumber || u.phone}</span>}
                           </div>
                         </div>
                       </td>
@@ -251,21 +251,22 @@ const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
 /** PUT /users/{id}: name, email and phone of another user. Passwords are never set here. */
 function EditUserModal({ user, onClose, onSaved }: { user: BackendUser; onClose: () => void; onSaved: (u: BackendUser) => void }) {
   const action = useApiAction();
-  const [form, setForm] = useState({ fullName: user.fullName, email: user.email, phone: user.phone ?? "" });
+  const initialPhone = user.phoneNumber ?? user.phone ?? "";
+  const [form, setForm] = useState({ fullName: user.fullName, email: user.email, phoneNumber: initialPhone });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const phone = form.phone.replace(/[\s-]/g, "");
-    if (!form.fullName.trim() || !form.email.trim()) return setError("Name and email are required.");
-    if (phone && !BD_PHONE.test(phone)) return setError("Enter a valid Bangladeshi mobile number (e.g. 01712345678).");
+    const phoneNumber = form.phoneNumber.replace(/[\s-]/g, "");
+    if (!form.fullName.trim()) return setError("Name is required.");
+    if (phoneNumber && !BD_PHONE.test(phoneNumber)) return setError("Enter a valid Bangladeshi mobile number (e.g. 01712345678).");
     // Send only what changed.
     const changes: Record<string, string> = {};
     if (form.fullName.trim() !== user.fullName) changes.fullName = form.fullName.trim();
     if (form.email.trim().toLowerCase() !== user.email.toLowerCase()) changes.email = form.email.trim();
-    if (phone !== (user.phone ?? "")) changes.phone = phone;
+    if (phoneNumber !== initialPhone) changes.phoneNumber = phoneNumber;
     if (!Object.keys(changes).length) return onClose();
     setError("");
     setSaving(true);
@@ -291,7 +292,7 @@ function EditUserModal({ user, onClose, onSaved }: { user: BackendUser; onClose:
         </label>
         <label className="flex flex-col gap-1.5">
           <span className={labelClass}>Mobile number</span>
-          <input className={inputClass} value={form.phone} onChange={set("phone")} inputMode="tel" placeholder="01XXXXXXXXX (optional)" />
+          <input className={inputClass} value={form.phoneNumber} onChange={set("phoneNumber")} inputMode="tel" placeholder="01XXXXXXXXX (optional)" />
         </label>
         <p className="text-[11px] text-slate-400">Role and status are changed from the list. Passwords cannot be set here.</p>
         <FieldError message={error} />

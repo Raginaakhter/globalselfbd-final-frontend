@@ -5,7 +5,7 @@ import { CalendarClock, MapPin, Phone, User } from "lucide-react";
 import { formatPrice } from "@/lib/shop";
 import { PAYMENT_METHOD_LABELS, type Order } from "@/lib/backend-types";
 import ProductImage from "@/components/shop/ProductImage";
-import StatusTimeline from "./StatusTimeline";
+import StatusTimeline, { PreOrderBadge, PreOrderNotice } from "./StatusTimeline";
 
 /** Full order card (customer, items, totals, delivery, status) for a backend order. */
 export default function OrderDetailView({ order, children }: { order: Order; children?: React.ReactNode }) {
@@ -14,15 +14,31 @@ export default function OrderDetailView({ order, children }: { order: Order; chi
     <div className="rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden">
       <div className="p-5 sm:p-6 border-b border-slate-100">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-          <p className="text-sm font-bold text-slate-500">
+          <p className="text-sm font-bold text-slate-500 flex items-center gap-2 flex-wrap">
             Order <span className="text-blue-950 font-black tracking-wide">{order.orderNumber}</span>
+            {order.isPreOrder && <PreOrderBadge />}
           </p>
           <p className="text-xs text-slate-400 flex items-center gap-1.5">
             <CalendarClock className="w-3.5 h-3.5" />
             {new Date(order.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
           </p>
         </div>
-        <StatusTimeline status={order.orderStatus} />
+        {order.isPreOrder && order.orderStatus !== "CANCELLED" && order.orderStatus !== "DELIVERED" && (
+          <PreOrderNotice minDays={order.preOrderMinDays} expectedDeliveryDate={order.expectedDeliveryDate} className="mb-6" />
+        )}
+        <StatusTimeline
+          status={order.orderStatus}
+          cancellationReason={order.cancellationReason}
+          timestamps={{
+            PENDING: order.createdAt,
+            CONFIRMED: order.confirmedAt,
+            READY_TO_SHIP: order.readyToShipAt,
+            SHIPPED: order.shippedAt,
+            OUT_FOR_DELIVERY: order.outForDeliveryAt,
+            DELIVERED: order.deliveredAt,
+            CANCELLED: order.cancelledAt,
+          }}
+        />
       </div>
 
       <div className="p-5 sm:p-6 space-y-5">
@@ -65,6 +81,7 @@ export default function OrderDetailView({ order, children }: { order: Order; chi
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-blue-950 line-clamp-1">{it.productTitleSnapshot}</p>
+                {it.isPreOrder && <PreOrderBadge className="mt-0.5" />}
                 <p className="text-xs text-slate-500">
                   {it.selectedSize ? `Size ${it.selectedSize} · ` : ""}
                   {formatPrice(it.unitPrice)} × {it.quantity}

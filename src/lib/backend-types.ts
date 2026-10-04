@@ -40,6 +40,10 @@ export interface Product {
   gallery: string[];
   availability: "IN_STOCK" | "OUT_OF_STOCK";
   status: Status;
+  /** Sells without a stock requirement; always reported as IN_STOCK. */
+  isPreOrder?: boolean;
+  /** Promised fulfilment window in days (≥ 15 when isPreOrder, 0 otherwise). */
+  preOrderMinDays?: number;
   /** Staff with inventory.view only */
   stock?: number;
   /** Staff with products.update only */
@@ -61,9 +65,39 @@ export type ProductDeleteResult =
   | { _id: string; productTitle: string; deleted: true; status?: undefined }
   | { _id: string; productTitle: string; deleted: false; status: Status };
 
-export type OrderStatus = "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+export type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PROCESSING"
+  | "READY_TO_SHIP"
+  | "SHIPPED"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "CANCELLED";
+
+/** Pre-order product limits enforced by the backend. */
+export const PRE_ORDER_MIN_DAYS = 15;
+export const PRE_ORDER_MAX_DAYS = 365;
+
+/** Internal, append-only order note. Never returned on customer-facing endpoints. */
+export interface AdminNote {
+  _id?: string;
+  note: string;
+  addedBy: string | { _id: string; fullName?: string; email?: string } | null;
+  addedAt: string;
+}
+
+/** Fields shared by every order shape that carries pre-order info. */
+export interface PreOrderInfo {
+  isPreOrder?: boolean;
+  preOrderMinDays?: number;
+  /** createdAt + preOrderMinDays (snapshot; not re-derived from product edits). */
+  expectedDeliveryDate?: string | null;
+}
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 export type PaymentMethod = "CASH_ON_DELIVERY" | "BKASH" | "NAGAD" | "ROCKET" | "CARD";
+export type FulfillmentMethod = "DELIVERY" | "STORE_PICKUP";
+export type AdminDiscountType = "PERCENTAGE" | "FIXED";
 
 export interface ShippingInformation {
   name: string;
@@ -85,9 +119,10 @@ export interface OrderItem {
   selectedUnit: string | null;
   unitPrice: number;
   subtotal: number;
+  isPreOrder?: boolean;
 }
 
-export interface Order {
+export interface Order extends PreOrderInfo {
   _id: string;
   orderNumber: string;
   customerId: string;
@@ -101,15 +136,24 @@ export interface Order {
   /** Backend says whether the customer may still cancel it */
   canCancel?: boolean;
   shippingCost: number;
+  /** DELIVERY by default; STORE_PICKUP forces shippingCost to 0. */
+  fulfillmentMethod?: FulfillmentMethod;
+  /** Admin-applied discount (null for normal orders). */
+  adminDiscountType?: AdminDiscountType | null;
+  adminDiscountValue?: number;
+  adminDiscountAmount?: number;
   totalAmount: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
   shippingInformation: ShippingInformation;
   cancelledAt: string | null;
+  cancellationReason?: string | null;
   /** Set when the order reaches that step; null until then. */
   confirmedAt?: string | null;
+  readyToShipAt?: string | null;
   shippedAt?: string | null;
+  outForDeliveryAt?: string | null;
   deliveredAt?: string | null;
   paidAt?: string | null;
   refundedAt?: string | null;
@@ -123,9 +167,11 @@ export interface AdminOrder extends Order {
   customer?: { _id: string; fullName: string; email: string } | null;
   allowedNextStatuses?: OrderStatus[];
   allowedNextPaymentStatuses?: PaymentStatus[];
+  cancelledBy?: string | null;
+  adminNotes?: AdminNote[];
 }
 
-export interface AdminOrderListItem {
+export interface AdminOrderListItem extends PreOrderInfo {
   _id: string;
   orderNumber: string;
   customerId: string;
@@ -137,6 +183,10 @@ export interface AdminOrderListItem {
   /** Product price before discount */
   subtotal: number;
   discount: number;
+  /** Admin-only discount actually taken off the order (0 if none). */
+  adminDiscountAmount?: number;
+  /** DELIVERY (default) or STORE_PICKUP. */
+  fulfillmentMethod?: FulfillmentMethod;
   /** Delivery charge */
   shippingCost: number;
   totalAmount: number;
@@ -146,7 +196,41 @@ export interface AdminOrderListItem {
   createdAt: string;
 }
 
-export interface OrderListItem {
+/** Response of POST /api/orders/checkout (preview without saving). */
+export interface CheckoutPreview extends PreOrderInfo {
+  items: {
+    productId: string;
+    comboId: string | null;
+    productTitle: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }[];
+  subtotal: number;
+  discount: number;
+  coupon?: {
+    code: string;
+    discountType: string;
+    discountValue: number;
+    eligibleSubtotal: number;
+    discount: number;
+  } | null;
+  adminDiscount?: {
+    type: AdminDiscountType;
+    value: number;
+    amount: number;
+    eligibleSubtotal: number;
+  } | null;
+  fulfillmentMethod: FulfillmentMethod;
+  shippingCost: number;
+  totalAmount: number;
+  paymentMethod: PaymentMethod;
+  shippingInformation: ShippingInformation;
+  /** Gates the admin-only discount controls in the checkout UI. */
+  canUseAdminDiscount: boolean;
+}
+
+export interface OrderListItem extends PreOrderInfo {
   _id: string;
   orderNumber: string;
   itemCount: number;
@@ -157,6 +241,31 @@ export interface OrderListItem {
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
   createdAt: string;
+}
+
+/** Response of POST /api/public/orders/track (guest lookup by phone + order number). */
+export interface TrackedOrder extends PreOrderInfo {
+  orderNumber: string;
+  orderStatus: OrderStatus;
+  paymentStatus: PaymentStatus;
+  fulfillmentMethod?: FulfillmentMethod;
+  subtotal: number;
+  shippingCost: number;
+  totalAmount: number;
+  cancellationReason?: string | null;
+  items?: { productTitle: string; thumbnail: string; quantity: number; unitPrice: number; subtotal: number; isPreOrder?: boolean }[];
+  shippingInformation?: Partial<ShippingInformation>;
+  timeline?: {
+    placedAt: string | null;
+    confirmedAt: string | null;
+    readyToShipAt: string | null;
+    shippedAt: string | null;
+    outForDeliveryAt: string | null;
+    deliveredAt: string | null;
+    cancelledAt: string | null;
+  };
+  /** Older responses */
+  itemCount?: number;
 }
 
 export interface RoleRef {
@@ -172,7 +281,9 @@ export interface BackendUser {
   email: string;
   role: RoleRef | null;
   status: Status;
-  /** Empty string when not set. */
+  /** Primary field on the new phone-first API. */
+  phoneNumber?: string;
+  /** Legacy field for pre-migration responses. */
   phone?: string;
   avatarUrl?: string;
   createdAt: string;
@@ -341,7 +452,7 @@ export interface SalesReport {
   timezone: string;
   basis: string;
   periods: SalesPeriod[];
-  ordersByStatus: Record<OrderStatus, MoneySplit & { orders: number; amount: number }>;
+  ordersByStatus: Partial<Record<OrderStatus, MoneySplit & { orders: number; amount: number }>>;
 }
 
 export type SalesChartRange = "7d" | "14d" | "30d" | "6m" | "1y";
@@ -445,7 +556,9 @@ export const ACTIVITY_ACTIONS = [
   "ORDER_CREATED",
   "ORDER_CONFIRMED",
   "ORDER_PROCESSING",
+  "ORDER_READY_TO_SHIP",
   "ORDER_SHIPPED",
+  "ORDER_OUT_FOR_DELIVERY",
   "ORDER_DELIVERED",
   "ORDER_CANCELLED",
   "PAYMENT_STATUS_CHANGED",

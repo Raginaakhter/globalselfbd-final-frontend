@@ -66,19 +66,20 @@ export default function AccountPanel() {
   const { user, updateProfile, hasPermission } = useAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ fullName: "", phone: "", email: "", currentPassword: "" });
+  const [form, setForm] = useState({ fullName: "", phoneNumber: "", email: "", currentPassword: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
   const canEdit = hasPermission("profile.update");
   if (!user) return null;
 
   const emailChanged = form.email.trim().toLowerCase() !== user.email.toLowerCase();
+  const phoneChanged = form.phoneNumber.replace(/[\s-]/g, "") !== user.phoneNumber;
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [k]: e.target.value }));
     setErrors((er) => ({ ...er, [k]: undefined }));
   };
 
   const startEditing = () => {
-    setForm({ fullName: user.name, phone: user.phone, email: user.email, currentPassword: "" });
+    setForm({ fullName: user.name, phoneNumber: user.phoneNumber, email: user.email, currentPassword: "" });
     setErrors({});
     setEditing(true);
   };
@@ -86,22 +87,23 @@ export default function AccountPanel() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     const found: typeof errors = {};
-    const phone = form.phone.replace(/[\s-]/g, "");
+    const phoneNumber = form.phoneNumber.replace(/[\s-]/g, "");
     if (!form.fullName.trim()) found.fullName = "Name cannot be empty.";
-    if (phone && !BD_PHONE.test(phone)) found.phone = "Enter a valid Bangladeshi mobile number (e.g. 01712345678).";
-    if (!EMAIL.test(form.email.trim())) found.email = "Enter a valid email address.";
-    if (emailChanged && !form.currentPassword) found.currentPassword = "Enter your current password to change the email.";
+    if (phoneNumber && !BD_PHONE.test(phoneNumber)) found.phoneNumber = "Enter a valid Bangladeshi mobile number (e.g. 01712345678).";
+    if (form.email.trim() && !EMAIL.test(form.email.trim())) found.email = "Enter a valid email address.";
+    // Backend requires currentPassword to change phone or email.
+    if ((phoneChanged || emailChanged) && !form.currentPassword) {
+      found.currentPassword = "Enter your current password to change contact details.";
+    }
     setErrors(found);
     if (Object.keys(found).length) return;
 
     // Send only what changed.
     const changes: ProfileChanges = {};
     if (form.fullName.trim() !== user.name) changes.fullName = form.fullName.trim();
-    if (phone !== user.phone) changes.phone = phone;
-    if (emailChanged) {
-      changes.email = form.email.trim();
-      changes.currentPassword = form.currentPassword;
-    }
+    if (phoneChanged) changes.phoneNumber = phoneNumber;
+    if (emailChanged) changes.email = form.email.trim();
+    if (phoneChanged || emailChanged) changes.currentPassword = form.currentPassword;
     if (!Object.keys(changes).length) return setEditing(false);
 
     setSaving(true);
@@ -137,17 +139,17 @@ export default function AccountPanel() {
             </label>
             <label className="block">
               <span className={labelClass}>Mobile Number</span>
-              <input value={form.phone} onChange={set("phone")} inputMode="tel" autoComplete="tel" placeholder="01XXXXXXXXX (optional)" className={inputClass} />
-              {errors.phone && <span className="text-xs font-semibold text-rose-600">{errors.phone}</span>}
+              <input value={form.phoneNumber} onChange={set("phoneNumber")} inputMode="tel" autoComplete="tel" placeholder="01XXXXXXXXX" className={inputClass} />
+              {errors.phoneNumber && <span className="text-xs font-semibold text-rose-600">{errors.phoneNumber}</span>}
             </label>
             <label className="block sm:col-span-2">
-              <span className={labelClass}>Email Address</span>
+              <span className={labelClass}>Email Address (optional)</span>
               <input type="email" value={form.email} onChange={set("email")} autoComplete="email" className={inputClass} />
               {errors.email && <span className="text-xs font-semibold text-rose-600">{errors.email}</span>}
             </label>
-            {emailChanged && (
+            {(emailChanged || phoneChanged) && (
               <label className="block sm:col-span-2">
-                <span className={labelClass}>Current Password (needed to change email)</span>
+                <span className={labelClass}>Current Password (needed to change phone or email)</span>
                 <input type="password" value={form.currentPassword} onChange={set("currentPassword")} autoComplete="current-password" className={inputClass} />
                 {errors.currentPassword && <span className="text-xs font-semibold text-rose-600">{errors.currentPassword}</span>}
               </label>
@@ -179,15 +181,15 @@ export default function AccountPanel() {
             <p className="text-sm font-semibold text-slate-800">{user.name}</p>
           </div>
           <div>
-            <span className={labelClass}>Email Address</span>
+            <span className={labelClass}>Mobile Number</span>
             <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-              <Mail className="w-4 h-4 text-slate-400" /> {user.email}
+              <Phone className="w-4 h-4 text-slate-400" /> {user.phoneNumber || <span className="text-slate-400 font-medium">Not added</span>}
             </p>
           </div>
           <div>
-            <span className={labelClass}>Mobile Number</span>
+            <span className={labelClass}>Email Address</span>
             <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-              <Phone className="w-4 h-4 text-slate-400" /> {user.phone || <span className="text-slate-400 font-medium">Not added</span>}
+              <Mail className="w-4 h-4 text-slate-400" /> {user.email || <span className="text-slate-400 font-medium">Not added</span>}
             </p>
           </div>
           <div>

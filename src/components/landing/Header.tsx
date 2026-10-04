@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useCategorySidebar } from "@/context/CategorySidebarContext";
 import CategoryIcon from "@/components/shop/CategoryIcon";
 import { ChevronDown, Search, ShoppingCart, User as UserIcon, Menu, X, LayoutGrid, Package, Heart } from "lucide-react";
 import Logo from "./Logo";
@@ -15,8 +16,8 @@ export default function Header() {
   const { isAuthenticated, user } = useAuth();
   const { categories, navLinks } = useSite();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [catOpen, setCatOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const { open: catOpen, toggle: toggleCategorySidebar } = useCategorySidebar();
   const router = useRouter();
   const pathname = usePathname() ?? "/";
   // Active on its own page and on pages under it ("/shop" stays active on "/shop?q=...").
@@ -151,26 +152,15 @@ export default function Header() {
       {/* Desktop nav strip */}
       <nav className="hidden lg:block border-t border-slate-100 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-11 flex items-center gap-1 relative">
-          <div className="relative" onMouseEnter={() => setCatOpen(true)} onMouseLeave={() => setCatOpen(false)}>
-            <button
-              type="button"
-              aria-expanded={catOpen}
-              onClick={() => setCatOpen((v) => !v)}
-              className="flex items-center gap-2 h-11 px-4 bg-blue-900 text-white text-sm font-bold hover:bg-blue-800 transition-colors cursor-pointer"
-            >
-              <LayoutGrid className="w-4 h-4" /> Shop By Category
-            </button>
-            {catOpen && (
-              <div className="absolute left-0 top-full w-140 bg-white rounded-b-2xl border border-slate-200 shadow-2xl p-3 grid grid-cols-2 gap-1">
-                {categories.map((c) => (
-                  <Link key={c._id} href={`/shop?category=${c.slug}`} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-blue-50 transition-colors">
-                    <CategoryIcon category={c} />
-                    <span className="text-sm font-semibold text-blue-950">{c.name}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            aria-expanded={catOpen}
+            aria-controls="category-sidebar"
+            onClick={toggleCategorySidebar}
+            className="flex items-center gap-2 h-11 px-4 bg-blue-900 text-white text-sm font-bold hover:bg-blue-800 transition-colors cursor-pointer"
+          >
+            <LayoutGrid className="w-4 h-4" /> Shop By Category
+          </button>
           {navLinks.map((l) => {
             // Any child link active also lights up the parent (e.g. About Us stays highlighted on /privacy-policy)
             const active = isActive(l.href) || (l.children ?? []).some((c) => isActive(c.href));
@@ -193,6 +183,11 @@ export default function Header() {
                 />
                 {l.hot && <span className="mr-1.5">🔥</span>}
                 {l.label}
+                {l.badge && (
+                  <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-violet-600 to-fuchsia-600 text-[10px] font-black tracking-wide text-white uppercase shadow-xs">
+                    {l.badge}
+                  </span>
+                )}
                 {l.children && <ChevronDown className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" />}
               </span>
             );
@@ -243,11 +238,19 @@ export default function Header() {
                   href={l.href}
                   onClick={() => setMenuOpen(false)}
                   aria-current={isActive(l.href) ? "page" : undefined}
-                  className={`block py-2.5 px-3 text-sm font-semibold transition-colors ${
+                  className={`flex items-center justify-between py-2.5 px-3 text-sm font-semibold transition-colors ${
                     isActive(l.href) ? "text-blue-900 bg-blue-50 border-l-4 border-l-blue-900" : "text-navy-700 hover:text-blue-900 hover:bg-blue-50/70"
                   }`}
                 >
-                  {l.label}
+                  <span className="flex items-center gap-1.5">
+                    {l.hot && <span>🔥</span>}
+                    {l.label}
+                  </span>
+                  {l.badge && (
+                    <span className="px-2 py-0.5 rounded-md bg-gradient-to-r from-violet-600 to-fuchsia-600 text-[10px] font-black text-white uppercase">
+                      {l.badge}
+                    </span>
+                  )}
                 </Link>
                 {l.children && (
                   // Child links show as an indented list under the parent so the whole menu is scannable in one tap

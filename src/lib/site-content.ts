@@ -28,6 +28,7 @@ export const SITE_CONTENT: Omit<SiteData, "categories" | "banners" | "promoCards
   navLinks: [
     { label: "Home", href: "/" },
     { label: "Shop All", href: "/shop" },
+    { label: "Pre-Order", href: "/pre-order", badge: "New" },
     { label: "Offer", href: "/offer", hot: true },
     { label: "Combo", href: "/combo" },
     {
@@ -48,6 +49,7 @@ export const SITE_CONTENT: Omit<SiteData, "categories" | "banners" | "promoCards
       title: "Customer Support",
       links: [
         { label: "Track Your Order", href: "/track-order" },
+        { label: "Pre-Order Products", href: "/pre-order" },
         { label: "Contact Us", href: "/contact" },
         { label: "About Us", href: "/about" },
         { label: "Shipping Policy", href: "/shipping-policy" },

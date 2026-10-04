@@ -31,14 +31,15 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string, confirmPassword: string) => Promise<boolean>;
+  /** Accepts a phone number (default) or email (for staff/admin). */
+  login: (identifier: string, password: string) => Promise<boolean>;
+  register: (name: string, phoneNumber: string, password: string, confirmPassword: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  forgotPassword: (email: string) => Promise<boolean>;
-  verifyOtp: (email: string, otp: string) => Promise<string | null>;
+  forgotPassword: (phoneNumber: string) => Promise<boolean>;
+  verifyOtp: (phoneNumber: string, otp: string) => Promise<string | null>;
   resetPassword: (resetToken: string, newPassword: string, confirmPassword: string) => Promise<boolean>;
   refreshAuthSession: () => Promise<boolean>;
-  /** PUT /api/auth/me. Changing email needs currentPassword. Resolves true on success (errors are toasted). */
+  /** PUT /api/auth/me. Changing phone/email needs currentPassword. Resolves true on success (errors are toasted). */
   updateProfile: (changes: ProfileChanges) => Promise<boolean>;
   /** POST /api/uploads/avatar: saved to the profile right away. */
   uploadAvatar: (file: File) => Promise<boolean>;
@@ -49,7 +50,7 @@ interface AuthContextType {
 
 export interface ProfileChanges {
   fullName?: string;
-  phone?: string;
+  phoneNumber?: string;
   avatarUrl?: string;
   email?: string;
   currentPassword?: string;
@@ -199,7 +200,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [authenticatedFetch]
   );
 
-  const hasPermission = useCallback((permission: string) => permissions.includes(permission), [permissions]);
+  const hasPermission = useCallback(
+    (permission: string) => {
+      if (!user) return false;
+      const role = (user.role || "").toLowerCase();
+      if (role === "admin" || role === "superadmin" || permissions.includes("*") || permissions.includes("all")) {
+        return true;
+      }
+      return permissions.includes(permission);
+    },
+    [user, permissions]
+  );
 
   const startSession = async (url: string, payload: unknown, fallbackError: string, successMessage: string) => {
     try {
@@ -223,11 +234,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = (email: string, password: string) =>
-    startSession("/api/auth/login", { email, password }, "Invalid email or password.", "Welcome back! Login successful.");
+  // Login accepts phone (default) or email (for admin / legacy accounts). The proxy forwards whichever we send.
+  const login = (identifier: string, password: string) => {
+    const trimmed = identifier.trim();
+    const payload = trimmed.includes("@") ? { email: trimmed, password } : { phoneNumber: trimmed, password };
+    return startSession("/api/auth/login", payload, "Invalid phone number / email or password.", "Welcome back! Login successful.");
+  };
 
-  const register = (name: string, email: string, password: string, confirmPassword: string) =>
-    startSession("/api/auth/register", { fullName: name, email, password, confirmPassword }, "Registration failed.", "Account created successfully!");
+  const register = (name: string, phoneNumber: string, password: string, confirmPassword: string) =>
+    startSession(
+      "/api/auth/register",
+      { fullName: name, phoneNumber: phoneNumber.trim(), password, confirmPassword },
+      "Registration failed.",
+      "Account created successfully!"
+    );
 
   const postPublic = async (url: string, payload: unknown) => {
     const res = await fetch(url, {
@@ -239,11 +259,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { ok: res.ok && Boolean(data?.success), data };
   };
 
-  const forgotPassword = async (email: string): Promise<boolean> => {
+  const forgotPassword = async (phoneNumber: string): Promise<boolean> => {
     try {
-      const { ok, data } = await postPublic("/api/auth/forgot-password", { email });
+      const { ok, data } = await postPublic("/api/auth/forgot-password", { phoneNumber: phoneNumber.trim() });
       if (ok) {
-        toast.success(data.message || "Please check your email for the verification code.");
+        toast.success(data.message || "A verification code has been sent to your phone.");
         return true;
       }
       toast.error(data?.message || "Failed to process forgot password request.");
@@ -254,9 +274,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const verifyOtp = async (email: string, otp: string): Promise<string | null> => {
+  const verifyOtp = async (phoneNumber: string, otp: string): Promise<string | null> => {
     try {
-      const { ok, data } = await postPublic("/api/auth/verify-otp", { email, otp });
+      const { ok, data } = await postPublic("/api/auth/verify-otp", { phoneNumber: phoneNumber.trim(), otp });
       if (ok && data.data?.resetToken) {
         toast.success(data.message || "Verification code verified successfully!");
         return data.data.resetToken;
@@ -333,7 +353,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         accessToken,
         permissions,
         menu,
-        isStaff: menu.length > 0,
+        isStaff: menu.length > 0 || ["admin", "superadmin", "manager", "salesman"].includes((user?.role || "").toLowerCase()),
         hasPermission,
         isAuthenticated: Boolean(user),
         loading,

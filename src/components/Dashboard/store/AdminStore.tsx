@@ -17,9 +17,9 @@ export function useDashboardAccess() {
   const levelOf = useCallback(
     (key: ModuleKey): AccessLevel => {
       const mod = MODULES.find((m) => m.key === key);
-      return mod && isStaff ? levelFor(mod, menuKeys, permissionSet) : "none";
+      return mod && isStaff ? levelFor(mod, menuKeys, permissionSet, user?.role) : "none";
     },
-    [isStaff, menuKeys, permissionSet]
+    [isStaff, menuKeys, permissionSet, user?.role]
   );
 
   return {

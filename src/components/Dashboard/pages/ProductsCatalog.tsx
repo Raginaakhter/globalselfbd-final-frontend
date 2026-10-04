@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CirclePlus, Eye, Package, Pencil, Tag, Trash } from "lucide-react";
+import { CalendarClock, CirclePlus, Eye, Package, Pencil, Tag, Trash } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import type { Category, Product, ProductDeleteResult, Status } from "@/lib/backend-types";
+import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
 import { errorMessage, qs, useApiAction, useApiQuery } from "../api";
 import { formatBDT } from "../format";
@@ -48,9 +49,11 @@ export default function ProductsCatalog() {
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [availability, setAvailability] = useState("");
+  const [preOrderFilter, setPreOrderFilter] = useState("");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const [stockFor, setStockFor] = useState<Product | null>(null);
+  const [preOrderFor, setPreOrderFor] = useState<Product | null>(null);
   const q = useDebounced(search);
 
   const canCreate = hasPermission("products.create");
@@ -58,7 +61,18 @@ export default function ProductsCatalog() {
   const canDelete = hasPermission("products.delete");
   const canStock = hasPermission("inventory.update");
 
-  const products = useApiQuery<Product[]>(`/products${qs({ page, limit: 20, search: q, category, status: canUpdate ? status : "", availability, sort })}`);
+  const products = useApiQuery<Product[]>(
+    `/products${qs({
+      page,
+      limit: 20,
+      search: q,
+      category,
+      status: canUpdate ? status : "",
+      availability,
+      isPreOrder: preOrderFilter === "preOrder" ? true : preOrderFilter === "normal" ? false : undefined,
+      sort,
+    })}`
+  );
   const categories = useApiQuery<Category[]>(hasPermission("categories.view") ? "/categories" : null);
   const reset = <T,>(fn: (v: T) => void) => (v: T) => (fn(v), setPage(1));
 
@@ -133,6 +147,11 @@ export default function ProductsCatalog() {
           <option value="IN_STOCK">In stock</option>
           <option value="OUT_OF_STOCK">Out of stock</option>
         </select>
+        <select className={selectClass} value={preOrderFilter} onChange={(e) => reset(setPreOrderFilter)(e.target.value)} title="Selling type">
+          <option value="">All selling types</option>
+          <option value="preOrder">Pre-orders only</option>
+          <option value="normal">Normal products only</option>
+        </select>
         <select className={selectClass} value={sort} onChange={(e) => reset(setSort)(e.target.value)}>
           <option value="newest">Newest</option>
           <option value="oldest">Oldest</option>
@@ -200,6 +219,22 @@ export default function ProductsCatalog() {
                             {p.stock} in stock
                           </button>
                         )}
+                        {p.isPreOrder ? (
+                          <button
+                            disabled={!canUpdate}
+                            onClick={() => setPreOrderFor(p)}
+                            title={canUpdate ? "Edit pre-order" : undefined}
+                            className={`inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2 py-0.5 text-[10px] font-extrabold text-white uppercase ${canUpdate ? "cursor-pointer hover:brightness-110" : ""}`}
+                          >
+                            <CalendarClock className="h-3 w-3" /> Pre-order · {p.preOrderMinDays ?? 0}d
+                          </button>
+                        ) : (
+                          canUpdate && (
+                            <button onClick={() => setPreOrderFor(p)} className="cursor-pointer text-[11px] font-semibold text-violet-600 hover:underline">
+                              + Enable pre-order
+                            </button>
+                          )
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -216,7 +251,21 @@ export default function ProductsCatalog() {
                           </Link>
                         )}
                         {canUpdate && (
-                          <Link href={`${BASE}/products/edit/${p._id}`} title="Edit" className="p-1.5 text-slate-400 transition hover:text-amber-600">
+                          <button
+                            type="button"
+                            onClick={() => setPreOrderFor(p)}
+                            title={p.isPreOrder ? `Edit pre-order (${p.preOrderMinDays ?? 0} days)` : "Enable pre-order"}
+                            className={`p-1.5 rounded-lg transition ${
+                              p.isPreOrder
+                                ? "text-violet-600 hover:bg-violet-50 hover:text-violet-700"
+                                : "text-slate-400 hover:bg-slate-100 hover:text-violet-600"
+                            }`}
+                          >
+                            <CalendarClock className="h-4 w-4" />
+                          </button>
+                        )}
+                        {canUpdate && (
+                          <Link href={`${BASE}/products/edit/${p._id}`} title="Edit full product" className="p-1.5 text-slate-400 transition hover:text-amber-600">
                             <Pencil className="h-4 w-4" />
                           </Link>
                         )}
@@ -237,7 +286,72 @@ export default function ProductsCatalog() {
       </div>
 
       {stockFor && <StockModal product={stockFor} onClose={() => setStockFor(null)} onSaved={replace} />}
+      {preOrderFor && <PreOrderModal product={preOrderFor} onClose={() => setPreOrderFor(null)} onSaved={replace} />}
     </div>
+  );
+}
+
+/** Quick pre-order switch, separate from the full product edit (PATCH /products/:id/pre-order). */
+function PreOrderModal({ product, onClose, onSaved }: { product: Product; onClose: () => void; onSaved: (p: Product) => void }) {
+  const action = useApiAction();
+  const [enabled, setEnabled] = useState(product.isPreOrder ?? false);
+  const [days, setDays] = useState(String(product.isPreOrder && product.preOrderMinDays ? product.preOrderMinDays : PRE_ORDER_MIN_DAYS));
+  const [saving, setSaving] = useState(false);
+  const n = Number(days);
+  const validDays = Number.isInteger(n) && n >= PRE_ORDER_MIN_DAYS && n <= PRE_ORDER_MAX_DAYS;
+  const valid = !enabled || validDays;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid) return;
+    setSaving(true);
+    const res = await action<Product>(`/products/${product._id}/pre-order`, {
+      method: "PATCH",
+      json: enabled ? { isPreOrder: true, preOrderMinDays: n } : { isPreOrder: false },
+    });
+    setSaving(false);
+    if (res) {
+      onSaved(res.data);
+      onClose();
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} className="max-w-sm">
+      <form onSubmit={submit} className="flex flex-col gap-4 p-6">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
+            <CalendarClock className="h-5 w-5 text-violet-600" /> Pre-order
+          </h2>
+          <p className="text-xs text-slate-500">{product.productTitle}</p>
+        </div>
+        <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-3">
+          <span className="text-sm font-bold text-slate-800">
+            Sell as pre-order
+            <span className="block text-[11px] font-medium text-slate-500">No stock needed; stock is not deducted.</span>
+          </span>
+          <Toggle checked={enabled} onChange={setEnabled} color="peer-checked:bg-violet-600" size="md" />
+        </label>
+        {enabled && (
+          <label className="flex flex-col gap-1.5">
+            <span className={labelClass}>
+              Minimum delivery days ({PRE_ORDER_MIN_DAYS}–{PRE_ORDER_MAX_DAYS})
+            </span>
+            <input type="number" min={PRE_ORDER_MIN_DAYS} max={PRE_ORDER_MAX_DAYS} step={1} className={inputClass} value={days} onChange={(e) => setDays(e.target.value)} autoFocus />
+            {!validDays && <span className="text-xs font-semibold text-rose-500">Must be a whole number between {PRE_ORDER_MIN_DAYS} and {PRE_ORDER_MAX_DAYS}.</span>}
+          </label>
+        )}
+        {!enabled && product.isPreOrder && <p className="text-xs text-amber-600">Turning pre-order off resets the delivery days to 0. Existing orders keep their own dates.</p>}
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="cursor-pointer rounded-xl px-4 text-sm font-semibold text-slate-500 hover:bg-slate-100">
+            Cancel
+          </button>
+          <PrimaryButton type="submit" loading={saving} disabled={!valid}>
+            Save
+          </PrimaryButton>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

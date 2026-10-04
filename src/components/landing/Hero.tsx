@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { useSite } from "@/context/SiteContext";
+import { useCategorySidebar } from "@/context/CategorySidebarContext";
 import type { Banner } from "@/lib/backend-types";
 
 const isExternal = (href: string) => /^https?:\/\//i.test(href);
@@ -78,7 +79,11 @@ function Slide({ banner, eager }: { banner: Banner; eager: boolean }) {
 
 /** Landing page slider built from the banners managed in the dashboard (GET /api/public/banners). */
 export default function Hero() {
-  const { banners, promoCards } = useSite();
+  const { banners, promoCards: allPromoCards } = useSite();
+  const { open: sidebarOpen } = useCategorySidebar();
+  // Promo cards are hidden (not removed) while the Shop By Category sidebar is open,
+  // per spec: "Hide all promotional/promo cards from the main content area".
+  const promoCards = sidebarOpen ? [] : allPromoCards;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const count = banners.length;

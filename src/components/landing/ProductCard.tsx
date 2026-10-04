@@ -64,7 +64,11 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
           </button>
 
           <div className="absolute left-2.5 top-2.5 z-20 flex flex-col gap-1 items-start max-w-[70%]">
-            {outOfStock ? (
+            {product.isPreOrder ? (
+              <span className={`${badgeClass} bg-gradient-to-r from-violet-600 to-fuchsia-600`}>
+                Pre-Order{product.preOrderMinDays ? ` · ${product.preOrderMinDays}d` : ""}
+              </span>
+            ) : outOfStock ? (
               <span className={`${badgeClass} bg-slate-700`}>Out of stock</span>
             ) : discountPercent > 0 ? (
               <span className={`${badgeClass} bg-blue-600`}>{discountPercent}% OFF</span>

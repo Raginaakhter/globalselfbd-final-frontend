@@ -9,10 +9,11 @@ export interface MenuItem {
 export interface SessionUser {
   id: string;
   name: string;
+  /** Can be empty for phone-first accounts. */
   email: string;
   avatar?: string | null;
   /** Bangladeshi mobile number, empty when not set. */
-  phone: string;
+  phoneNumber: string;
   status: string;
   /** Lower-case role name, e.g. "admin", "manager", "salesman", "customer". */
   role: string;
@@ -34,6 +35,9 @@ export interface BackendSessionUser {
   _id: string;
   fullName: string;
   email: string;
+  /** Primary identifier on the new phone-first API. */
+  phoneNumber?: string;
+  /** Legacy field kept for pre-migration responses. */
   phone?: string;
   avatarUrl?: string;
   status: string;
@@ -47,9 +51,9 @@ export function toSessionUser(u: BackendSessionUser): SessionUser {
   return {
     id: u._id,
     name: u.fullName,
-    email: u.email,
+    email: u.email ?? "",
     avatar: u.avatarUrl || null,
-    phone: u.phone ?? "",
+    phoneNumber: u.phoneNumber ?? u.phone ?? "",
     status: u.status,
     role: roleName.toLowerCase(),
     roleName,
