@@ -950,3 +950,258 @@ export interface OrderItemV2 extends OrderItem {
   comboId?: string | null;
   comboItemsSnapshot?: { productId: string; productTitle: string; quantity: number; unitPrice: number }[];
 }
+
+/* ---------- Inventory ---------- */
+
+export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+
+export type ShipmentStatus =
+  | "PENDING"
+  | "IN_TRANSIT"
+  | "PARTIALLY_RECEIVED"
+  | "RECEIVED"
+  | "CANCELLED";
+
+export type StockRequestStatus = "NEW" | "NOTIFIED" | "RESOLVED" | "CANCELLED";
+
+export type SupplierStatus = "ACTIVE" | "INACTIVE";
+
+export type LotStatus = "ACTIVE" | "DEPLETED" | "CANCELLED";
+
+export type StockMovementType =
+  | "PURCHASE"
+  | "SALE"
+  | "RESERVATION"
+  | "RELEASE"
+  | "RETURN"
+  | "DAMAGE"
+  | "LOSS"
+  | "ADJUSTMENT_IN"
+  | "ADJUSTMENT_OUT"
+  | "MANUAL_STOCK_UPDATE"
+  | "EXPIRY"
+  | "INTERNAL_USE";
+
+export interface InventorySummary {
+  totalProducts: number;
+  totalStock: number;
+  reservedStock: number;
+  availableStock: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  damagedQuantity: number;
+  returnedQuantity: number;
+  inventoryCost: number;
+  inventoryValue: number;
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+  profitMargin: number;
+  shipments: { total: number; pending: number };
+  suppliers: { active: number };
+}
+
+export interface InventoryRow {
+  _id: string;
+  productTitle: string;
+  slug: string;
+  sku: string | null;
+  stock: number;
+  reserved: number;
+  available: number;
+  soldQuantity: number;
+  soldRevenue: number;
+  returnedQuantity: number;
+  damagedQuantity: number;
+  productCost: number;
+  customerSellPrice: number;
+  customerSpecialPrice: number | null;
+  lowStockThreshold: number;
+  stockStatus: StockStatus;
+  isPreOrder: boolean;
+  cogs: number;
+  profit: number;
+  margin: number;
+  status: Status;
+}
+
+export interface InventoryLot {
+  _id: string;
+  productId?: string | { _id: string; productTitle?: string; sku?: string | null };
+  shipmentId?: string | null;
+  supplierId?: { _id?: string; name?: string } | string | null;
+  lotNumber: string;
+  receivedQuantity: number;
+  remainingQuantity: number;
+  unitCost: number;
+  landedUnitCost: number;
+  sellingPrice: number;
+  receivedDate: string;
+  expiryDate?: string | null;
+  status: LotStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StockMovement {
+  _id?: string;
+  productId: string | { _id?: string; productTitle?: string; sku?: string | null };
+  lotId?: string | null;
+  shipmentId?: string | null;
+  orderId?: string | null;
+  type: StockMovementType;
+  quantity: number;
+  previousStock: number;
+  newStock: number;
+  unitCost?: number;
+  reason?: string;
+  createdBy?: string | { _id?: string; fullName?: string } | null;
+  createdAt: string;
+}
+
+export interface InventoryProductDetail {
+  product: InventoryRow;
+  lots: InventoryLot[];
+  recentMovements: StockMovement[];
+}
+
+export interface Supplier {
+  _id: string;
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+  status: SupplierStatus;
+  shipmentCount?: number;
+  lotCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ShipmentItem {
+  _id?: string;
+  itemId?: string;
+  productId: string | { _id: string; productTitle?: string; sku?: string | null; thumbnail?: string };
+  purchaseQuantity: number;
+  receivedQuantity: number;
+  unitCost: number;
+  landedUnitCost?: number;
+  sellingPrice?: number;
+  notes?: string;
+}
+
+export interface Shipment {
+  _id: string;
+  shipmentNumber: string;
+  supplierId: Supplier | string | null;
+  shipmentDate: string;
+  expectedDate?: string | null;
+  receivedDate?: string | null;
+  status: ShipmentStatus;
+  items: ShipmentItem[];
+  subtotal: number;
+  shippingCost: number;
+  customsCost: number;
+  tax: number;
+  otherCost: number;
+  totalCost: number;
+  notes?: string;
+  totalProducts?: number;
+  totalQuantity?: number;
+  totalReceived?: number;
+  createdBy?: { _id?: string; fullName?: string } | string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StockRequest {
+  _id: string;
+  productId: { _id: string; productTitle: string; sku?: string | null } | string;
+  customerId?: { _id: string; fullName?: string; phoneNumber?: string; email?: string } | string | null;
+  requestedQuantity: number;
+  availableQuantity: number;
+  shortageQuantity: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  status: StockRequestStatus;
+  adminNote?: string;
+  notifiedAt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface InventoryValidationResult {
+  productId: string;
+  requested: number;
+  available: number | null;
+  ok: boolean;
+  stockStatus: StockStatus | null;
+  isPreOrder: boolean;
+}
+
+export interface CartStockValidation {
+  cartId: string;
+  ok: boolean;
+  issues: {
+    cartItemId: string;
+    type: "product" | "combo";
+    productId: string | null;
+    comboId: string | null;
+    productTitle: string;
+    requested: number;
+    available: number;
+    issue: string;
+  }[];
+}
+
+export interface OrderStockValidation {
+  ok: boolean;
+  reason?: string;
+}
+
+export interface ProfitReport {
+  rows: {
+    productId: string;
+    productTitle: string;
+    sku: string | null;
+    soldQuantity: number;
+    revenue: number;
+    cogs: number;
+    profit: number;
+    margin: number;
+  }[];
+  totals: { revenue: number; cogs: number; profit: number; margin: number };
+}
+
+export interface PurchaseReport {
+  shipments: {
+    _id?: string;
+    shipmentNumber: string;
+    supplier: string;
+    shipmentDate: string;
+    status: ShipmentStatus;
+    totalItems: number;
+    quantity: number;
+    received: number;
+    subtotal: number;
+    totalCost: number;
+  }[];
+  totals: { subtotal: number; totalCost: number; quantity: number; received: number };
+}
+
+export interface ValuationReport {
+  rows: {
+    productId?: string;
+    productTitle: string;
+    sku: string | null;
+    stock: number;
+    unitCost: number;
+    sellPrice: number;
+    costValue: number;
+    sellValue: number;
+  }[];
+  totals: { costValue: number; sellValue: number };
+}

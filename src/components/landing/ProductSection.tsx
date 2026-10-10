@@ -15,7 +15,7 @@ export default function ProductSection({ id, title, bn, products, tone = "plain"
   if (products.length === 0) return null;
 
   const grid = (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+    <div className="stagger-in grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
       {products.map((p) => (
         <ProductCard key={p._id} product={p} />
       ))}

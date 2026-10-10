@@ -8,7 +8,7 @@ import { ArrowLeft, CalendarClock, CreditCard, FileText, MapPin, NotebookPen, Pa
 import { useAuth } from "@/context/AuthContext";
 import type { AdminOrder, Invoice, InvoiceListItem, OrderStatus, PaymentStatus } from "@/lib/backend-types";
 import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
-import { ORDER_STATUS_FLOW } from "@/lib/order-status";
+import { ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, orderStatusFlowIndex, toCustomerStatus } from "@/lib/order-status";
 import { BASE } from "../AppSidebar";
 import { errorMessage, qs, useApiQuery } from "../api";
 import { formatBDT } from "../format";
@@ -98,19 +98,12 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     }
   };
 
+  // UI exposes only Confirmed → Delivered / Cancelled; the backend accepts the
+  // full flow but admins only need these two transitions.
   const computeFallbackStatuses = (curr: OrderStatus): OrderStatus[] => {
-    if (curr === "CANCELLED" || curr === "DELIVERED") return [];
-    const idx = ORDER_STATUS_FLOW.indexOf(curr);
-    const list: OrderStatus[] = [];
-    if (idx >= 0 && idx < ORDER_STATUS_FLOW.length - 1) {
-      list.push(ORDER_STATUS_FLOW[idx + 1]);
-      if (curr === "PROCESSING" && !list.includes("SHIPPED")) list.push("SHIPPED");
-      if (curr === "SHIPPED" && !list.includes("DELIVERED")) list.push("DELIVERED");
-    }
-    if (["PENDING", "CONFIRMED", "PROCESSING", "READY_TO_SHIP"].includes(curr)) {
-      list.push("CANCELLED");
-    }
-    return list;
+    const simple = toCustomerStatus(curr);
+    if (simple === "CANCELLED" || simple === "DELIVERED") return [];
+    return ["DELIVERED", "CANCELLED"];
   };
 
   const computeFallbackPayments = (curr: PaymentStatus): PaymentStatus[] => {
@@ -121,14 +114,16 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
   };
 
   const nextStatuses = hasPermission("orders.status")
-    ? (o.allowedNextStatuses?.length ? o.allowedNextStatuses : computeFallbackStatuses(o.orderStatus))
+    ? (o.allowedNextStatuses?.length
+        ? Array.from(new Set(o.allowedNextStatuses.map(toCustomerStatus) as OrderStatus[])).filter((s) => s !== toCustomerStatus(o.orderStatus))
+        : computeFallbackStatuses(o.orderStatus))
     : [];
   const nextPayments = hasPermission("orders.paymentStatus")
     ? (o.allowedNextPaymentStatuses?.length ? o.allowedNextPaymentStatuses : computeFallbackPayments(o.paymentStatus))
     : [];
   const canUpdateOrder = hasPermission("orders.update");
   const cancelled = o.orderStatus === "CANCELLED";
-  const flowIndex = ORDER_STATUS_FLOW.indexOf(o.orderStatus);
+  const flowIndex = orderStatusFlowIndex(o.orderStatus);
   const ship = o.shippingInformation;
   const card = "rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs";
 
@@ -174,7 +169,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
               <CalendarClock className="h-3.5 w-3.5" /> Pre-Order
             </span>
           )}
-          <StatusPill value={o.orderStatus} />
+          <StatusPill value={toCustomerStatus(o.orderStatus)} />
           <StatusPill value={o.paymentStatus} />
         </div>
       </div>
@@ -185,7 +180,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
           {ORDER_STATUS_FLOW.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <span className={`rounded-full px-3 py-1 text-[11px] font-extrabold ${i <= flowIndex ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-400"}`}>
-                {s.replace(/_/g, " ")}
+                {ORDER_STATUS_LABELS[s]}
               </span>
               {i < ORDER_STATUS_FLOW.length - 1 && <span className={`h-0.5 w-6 ${i < flowIndex ? "bg-emerald-500" : "bg-slate-200"}`} />}
             </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Loader2, Package, Phone, Search } from "lucide-react";
 import { formatPrice } from "@/lib/shop";
 import type { TrackedOrder } from "@/lib/backend-types";
@@ -12,21 +13,28 @@ const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
 
 /** Public order tracking — no account needed. Phone number + order number must match. */
 export default function TrackOrderPage() {
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [orderNumber, setOrderNumber] = useState("");
+  const search = useSearchParams();
+  const prefillNum = (search?.get("orderNumber") ?? "").trim().toUpperCase();
+  const prefillPhone = (search?.get("phone") ?? "").replace(/[\s-]/g, "");
+
+  const [phoneNumber, setPhoneNumber] = useState(prefillPhone);
+  const [orderNumber, setOrderNumber] = useState(prefillNum);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<TrackedOrder | null>(null);
+  const [justPlaced, setJustPlaced] = useState(Boolean(prefillNum && prefillPhone));
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const lookup = useCallback(async (num: string, phone: string) => {
+    if (!BD_PHONE.test(phone)) {
+      setError("Enter the phone number used on the order (e.g. 01712345678).");
+      return;
+    }
+    if (!num) {
+      setError("Please enter your order number (e.g. ORD-1001).");
+      return;
+    }
     setError("");
     setOrder(null);
-    const phone = phoneNumber.replace(/[\s-]/g, "");
-    const num = orderNumber.trim().toUpperCase();
-    if (!BD_PHONE.test(phone)) return setError("Enter the phone number used on the order (e.g. 01712345678).");
-    if (!num) return setError("Please enter your order number (e.g. ORD-1001).");
-
     setLoading(true);
     try {
       const res = await fetch("/api/v1/public/orders/track", {
@@ -45,6 +53,21 @@ export default function TrackOrderPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Auto-run the lookup when the page is opened with prefill (e.g. right after guest checkout).
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current) return;
+    if (!prefillNum || !prefillPhone) return;
+    autoRan.current = true;
+    void lookup(prefillNum, prefillPhone);
+  }, [prefillNum, prefillPhone, lookup]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setJustPlaced(false);
+    void lookup(orderNumber.trim().toUpperCase(), phoneNumber.replace(/[\s-]/g, ""));
   };
 
   return (
@@ -53,8 +76,14 @@ export default function TrackOrderPage() {
         <span className="w-14 h-14 mx-auto rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center mb-4">
           <Package className="w-7 h-7" />
         </span>
-        <h1 className="text-3xl font-black text-navy-700 tracking-tight">Track Your Order</h1>
-        <p className="text-sm text-slate-500 mt-2">Enter the phone number used on your order along with the order number.</p>
+        <h1 className="text-3xl font-black text-navy-700 tracking-tight">
+          {justPlaced ? "Order placed!" : "Track Your Order"}
+        </h1>
+        <p className="text-sm text-slate-500 mt-2">
+          {justPlaced
+            ? `Thanks! Your order ${prefillNum} is confirmed. Save this number — you can look it up any time with your phone number.`
+            : "Enter the phone number used on your order along with the order number."}
+        </p>
       </div>
 
       <form onSubmit={submit} className="rounded-3xl bg-white border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">

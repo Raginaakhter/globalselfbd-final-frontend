@@ -1,16 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
-import { callBackend, jsonPost } from "@/lib/server/backend";
-import { forwardedFor, readJson } from "../_shared";
+import { NextRequest } from "next/server";
+import { callBackend, jsonPost, type BackendSession } from "@/lib/server/backend";
+import { forwardedFor, readJson, sessionResponse } from "../_shared";
 
-// The backend resets passwords with phoneNumber + OTP. The existing reset screen passes a single
-// "resetToken" between steps, so it carries both values (base64url JSON, not a secret beyond the OTP).
+// Passwordless login / register: backend verifies the 6-digit OTP and returns the standard
+// session payload (access + refresh tokens, user, permissions, menu). Register and login
+// are unified — if the identifier is unknown the backend creates the account first.
 export async function POST(req: NextRequest) {
-  const { phoneNumber, otp } = await readJson(req);
-  const { status, body } = await callBackend(
-    "/api/auth/verify-reset-otp",
-    jsonPost({ phoneNumber, otp }, forwardedFor(req))
+  const { identifier, otp, fullName } = await readJson(req);
+  const result = await callBackend<BackendSession>(
+    "/api/auth/verify-otp",
+    jsonPost(
+      { identifier, otp, ...(fullName ? { fullName } : {}) },
+      forwardedFor(req)
+    )
   );
-  if (!body.success) return NextResponse.json(body, { status });
-  const resetToken = Buffer.from(JSON.stringify({ phoneNumber, otp })).toString("base64url");
-  return NextResponse.json({ success: true, message: body.message, data: { resetToken } });
+  return sessionResponse(result);
 }

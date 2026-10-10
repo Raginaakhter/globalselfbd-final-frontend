@@ -1,16 +1,17 @@
 "use client";
 
 import React from "react";
-import { Boxes, CalendarClock, CheckCircle2, Circle, ClipboardCheck, PackageCheck, PackageSearch, Truck, Bike, XCircle } from "lucide-react";
-import { ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, type OrderStatus, formatShortDate, orderStatusFlowIndex } from "@/lib/order-status";
+import { CalendarClock, CheckCircle2, Circle, PackageCheck, XCircle } from "lucide-react";
+import { ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, type OrderStatus, formatShortDate, orderStatusFlowIndex, toCustomerStatus } from "@/lib/order-status";
 
 const STEP_ICONS: Record<OrderStatus, React.ComponentType<{ className?: string }>> = {
-  PENDING: ClipboardCheck,
+  // All intermediate backend statuses collapse to "Confirmed" in the UI.
+  PENDING: CheckCircle2,
   CONFIRMED: CheckCircle2,
-  PROCESSING: PackageSearch,
-  READY_TO_SHIP: Boxes,
-  SHIPPED: Truck,
-  OUT_FOR_DELIVERY: Bike,
+  PROCESSING: CheckCircle2,
+  READY_TO_SHIP: CheckCircle2,
+  SHIPPED: CheckCircle2,
+  OUT_FOR_DELIVERY: CheckCircle2,
   DELIVERED: PackageCheck,
   CANCELLED: XCircle,
 };
@@ -76,19 +77,16 @@ export default function StatusTimeline({
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const cancelled = status === "CANCELLED";
-  const delivered = status === "DELIVERED";
+  const simple = toCustomerStatus(status);
+  const tone =
+    simple === "CANCELLED"
+      ? "bg-rose-50 text-rose-600"
+      : simple === "DELIVERED"
+      ? "bg-blue-50 text-blue-800"
+      : "bg-emerald-50 text-emerald-700";
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
-        cancelled
-          ? "bg-rose-50 text-rose-600"
-          : delivered
-          ? "bg-emerald-50 text-emerald-700"
-          : "bg-blue-50 text-blue-900"
-      }`}
-    >
-      {ORDER_STATUS_LABELS[status as OrderStatus] ?? status}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${tone}`}>
+      {ORDER_STATUS_LABELS[simple]}
     </span>
   );
 }

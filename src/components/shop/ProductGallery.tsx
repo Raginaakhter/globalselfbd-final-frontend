@@ -41,10 +41,10 @@ export default function ProductGallery({ images, alt, discountPercent }: { image
           <span className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-black">{discountPercent}% OFF</span>
         )}
         <div
-          className="w-full h-full transition-transform duration-150 ease-out"
+          className={`w-full h-full ${zooming ? "transition-transform duration-150 ease-out" : "product-breathe"}`}
           style={{
-            transform: zooming ? `scale(${ZOOM})` : "scale(1)",
-            transformOrigin: `${pos.x}% ${pos.y}%`,
+            transform: zooming ? `scale(${ZOOM})` : undefined,
+            transformOrigin: zooming ? `${pos.x}% ${pos.y}%` : "center center",
           }}
         >
           <ProductImage image={active} alt={alt} />

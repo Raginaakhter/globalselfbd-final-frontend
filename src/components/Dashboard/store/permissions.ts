@@ -2,6 +2,8 @@ import {
   History,
   Truck,
   BadgeCheck,
+  Bell,
+  Boxes,
   CalendarClock,
   GalleryHorizontal,
   Layers,
@@ -34,6 +36,7 @@ export type ModuleKey =
   | "offers"
   | "orders"
   | "pre-orders"
+  | "inventory"
   | "payments"
   | "invoices"
   | "users"
@@ -45,6 +48,7 @@ export type ModuleKey =
   | "footer"
   | "shipping"
   | "newsletter"
+  | "notification-settings"
   | "activity-logs"
   | "roles";
 
@@ -71,6 +75,7 @@ export const MODULES: ModuleDef[] = [
   { key: "offers", title: "Offers", path: `${BASE}/offers`, icon: Megaphone, section: "main", viewAny: ["offers.view"], editAny: ["offers.create", "offers.update", "offers.delete"] },
   { key: "orders", title: "Orders", path: `${BASE}/orders`, icon: ListOrdered, section: "main", menuKey: "orders", editAny: ["orders.status", "orders.paymentStatus", "orders.delete"] },
   { key: "pre-orders", title: "Pre-Orders", path: `${BASE}/pre-orders`, icon: CalendarClock, section: "main", viewAny: ["orders.viewAll", "orders.viewOwn", "orders.viewAssigned"], editAny: ["orders.update", "orders.status", "orders.delete"] },
+  { key: "inventory", title: "Inventory", path: `${BASE}/inventory`, icon: Boxes, section: "main", viewAny: ["inventory.view", "suppliers.view", "shipments.view", "stockRequests.view"], editAny: ["inventory.update", "inventory.create", "inventory.delete", "inventory.adjust", "suppliers.create", "suppliers.update", "suppliers.delete", "shipments.create", "shipments.update", "shipments.delete", "shipments.receive", "stockRequests.update", "stockRequests.delete"] },
   { key: "payments", title: "Payments", path: `${BASE}/payments`, icon: CreditCard, section: "main", menuKey: "payments", editAny: ["orders.paymentStatus"] },
   { key: "invoices", title: "Invoices", path: `${BASE}/invoices`, icon: FileText, section: "main", menuKey: "invoices", editAny: ["invoices.create"] },
   { key: "users", title: "Users", path: `${BASE}/users`, icon: Users, section: "main", menuKey: "users", editAny: ["users.create", "users.update", "users.delete", "users.changeRole"] },
@@ -82,6 +87,7 @@ export const MODULES: ModuleDef[] = [
   { key: "footer", title: "Footer", path: `${BASE}/footer`, icon: PanelBottom, section: "bottom", viewAny: ["settings.view"], editAny: ["settings.update"] },
   { key: "shipping", title: "Delivery Charges", path: `${BASE}/shipping`, icon: Truck, section: "bottom", viewAny: ["settings.view"], editAny: ["settings.update"] },
   { key: "newsletter", title: "Newsletter", path: `${BASE}/newsletter`, icon: Mail, section: "bottom", viewAny: ["newsletter.view"], editAny: ["newsletter.send", "newsletter.delete"] },
+  { key: "notification-settings", title: "Notification Email", path: `${BASE}/notification-settings`, icon: Bell, section: "bottom", viewAny: ["settings.view"], editAny: ["settings.update"] },
   { key: "activity-logs", title: "Activity Logs", path: `${BASE}/activity-logs`, icon: History, section: "bottom", viewAny: ["activityLogs.view"], editAny: [] },
   { key: "roles", title: "Roles & Permissions", path: `${BASE}/roles`, icon: KeyRound, section: "bottom", viewAny: ["roles.view"], editAny: ["roles.create", "roles.update", "roles.delete", "roles.status"] },
 ];

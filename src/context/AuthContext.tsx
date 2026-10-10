@@ -31,9 +31,14 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   isAuthenticated: boolean;
   loading: boolean;
-  /** Accepts a phone number (default) or email (for staff/admin). */
+  /** Legacy password login — kept for staff / admin accounts. Accepts phone or email. */
   login: (identifier: string, password: string) => Promise<boolean>;
+  /** Legacy password register — kept for anything that still needs it. The customer flow is passwordless. */
   register: (name: string, phoneNumber: string, password: string, confirmPassword: string) => Promise<boolean>;
+  /** Passwordless step 1: ask the backend to send a 6-digit OTP to the identifier (email or BD phone). */
+  requestOtp: (identifier: string) => Promise<RequestOtpResult | null>;
+  /** Passwordless step 2: verify the OTP, which registers the account on first use or logs it in. */
+  verifyLoginOtp: (identifier: string, otp: string, fullName?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   forgotPassword: (phoneNumber: string) => Promise<boolean>;
   verifyOtp: (phoneNumber: string, otp: string) => Promise<string | null>;
@@ -54,6 +59,15 @@ export interface ProfileChanges {
   avatarUrl?: string;
   email?: string;
   currentPassword?: string;
+}
+
+/** Shape returned by `/api/auth/request-otp`: channel the OTP went to + the cooldown knobs. */
+export interface RequestOtpResult {
+  channel: "sms" | "email" | string;
+  expiresInMinutes?: number;
+  resendAfterSeconds?: number;
+  /** Present only in development: the actual 6-digit code the backend generated, so devs can copy without checking the SMS / email. */
+  devOtp?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -249,6 +263,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       "Account created successfully!"
     );
 
+  // Passwordless step 1: request a 6-digit OTP. Toasts success / error here so callers only
+  // react to the outcome. Returns the channel + cooldown so the UI can show "Resend in Xs".
+  // The SMS provider (Mocean) can be slow, so we cap the wait at 20s and show a clear timeout toast
+  // instead of letting the button spin forever.
+  const requestOtp = async (identifier: string): Promise<RequestOtpResult | null> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20_000);
+    try {
+      const res = await fetch("/api/auth/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: identifier.trim() }),
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => null);
+      const payload = data?.data as
+        | { channel?: string; expiresInMinutes?: number; resendAfterSeconds?: number; devOnly?: { otp?: string } }
+        | undefined;
+      if (res.ok && data?.success) {
+        toast.success(data.message || "Verification code sent.");
+        return {
+          channel: payload?.channel ?? (identifier.includes("@") ? "email" : "sms"),
+          expiresInMinutes: payload?.expiresInMinutes,
+          resendAfterSeconds: payload?.resendAfterSeconds,
+          devOtp: payload?.devOnly?.otp,
+        };
+      }
+      toast.error(data?.message || "Failed to send verification code.");
+      return null;
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") {
+        toast.error("The server took too long to send the code. Please try again.");
+      } else {
+        toast.error("Network error. Please try again.");
+      }
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
+  // Passwordless step 2: the backend verifies the OTP and returns a full session (register-on-first-use).
+  const verifyLoginOtp = (identifier: string, otp: string, fullName?: string) =>
+    startSession(
+      "/api/auth/verify-otp",
+      { identifier: identifier.trim(), otp: otp.trim(), ...(fullName ? { fullName: fullName.trim() } : {}) },
+      "Invalid or expired code.",
+      "Welcome! You're signed in."
+    );
+
   const postPublic = async (url: string, payload: unknown) => {
     const res = await fetch(url, {
       method: "POST",
@@ -276,7 +340,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyOtp = async (phoneNumber: string, otp: string): Promise<string | null> => {
     try {
-      const { ok, data } = await postPublic("/api/auth/verify-otp", { phoneNumber: phoneNumber.trim(), otp });
+      const { ok, data } = await postPublic("/api/auth/verify-reset-otp", { phoneNumber: phoneNumber.trim(), otp });
       if (ok && data.data?.resetToken) {
         toast.success(data.message || "Verification code verified successfully!");
         return data.data.resetToken;
@@ -359,6 +423,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         register,
+        requestOtp,
+        verifyLoginOtp,
         logout,
         forgotPassword,
         verifyOtp,

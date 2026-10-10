@@ -97,7 +97,7 @@ export default function CartPage() {
               Proceed to Checkout <ArrowRight className="w-4 h-4" />
             </Link>
             <p className="text-[11px] text-slate-500 text-center mt-3">
-              {source === "local" ? "You'll be asked to sign in before placing the order." : "Secure checkout · Cash on delivery available"}
+              {source === "local" ? "Guest checkout available · Cash on delivery supported" : "Secure checkout · Cash on delivery available"}
             </p>
           </OrderSummary>
         </div>

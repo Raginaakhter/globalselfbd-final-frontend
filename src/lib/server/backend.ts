@@ -12,9 +12,14 @@ export interface BackendResult<T = unknown> {
 }
 
 /** Calls the backend and always resolves with a JSON body (network failures become 502). */
+// 25s cap — longer than Mocean's slowest realistic response, shorter than browser idle timeouts.
+const BACKEND_TIMEOUT_MS = 25_000;
+
 export async function callBackend<T = unknown>(path: string, init: RequestInit = {}): Promise<BackendResult<T>> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
   try {
-    const res = await fetch(`${BACKEND_URL}${path}`, { ...init, cache: "no-store" });
+    const res = await fetch(`${BACKEND_URL}${path}`, { ...init, cache: "no-store", signal: controller.signal });
     const text = await res.text();
     let body: BackendResult<T>["body"];
     try {
@@ -23,8 +28,19 @@ export async function callBackend<T = unknown>(path: string, init: RequestInit =
       body = { success: false, message: `Unexpected response from server (${res.status})` };
     }
     return { status: res.status, body };
-  } catch {
-    return { status: 502, body: { success: false, message: "Cannot reach the server. Please try again shortly." } };
+  } catch (err) {
+    const aborted = (err as { name?: string })?.name === "AbortError";
+    return {
+      status: aborted ? 504 : 502,
+      body: {
+        success: false,
+        message: aborted
+          ? "The server took too long to respond. Please try again."
+          : "Cannot reach the server. Please try again shortly.",
+      },
+    };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

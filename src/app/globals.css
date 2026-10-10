@@ -458,6 +458,77 @@ body {
   }
 }
 
+/* Product gallery: slow breathing zoom while the user is not hovering. */
+@keyframes product-breathe {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.product-breathe {
+  animation: product-breathe 4.5s ease-in-out infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* ---------- Scroll reveal: Reveal.tsx ---------- */
+.reveal {
+  opacity: 0;
+  transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-up    { transform: translate3d(0, 28px, 0); }
+.reveal-fade  { transform: none; }
+.reveal-left  { transform: translate3d(-28px, 0, 0); }
+.reveal-right { transform: translate3d(28px, 0, 0); }
+.reveal-zoom  { transform: scale(0.94); }
+.reveal.reveal-shown {
+  opacity: 1;
+  transform: none;
+}
+
+/* Staggered children for grids (CategoryGrid, ProductSection). */
+.stagger-in > * {
+  opacity: 0;
+  transform: translate3d(0, 20px, 0);
+  animation: stagger-pop 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes stagger-pop {
+  from { opacity: 0; transform: translate3d(0, 20px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.stagger-in > *:nth-child(1)  { animation-delay:  40ms; }
+.stagger-in > *:nth-child(2)  { animation-delay:  90ms; }
+.stagger-in > *:nth-child(3)  { animation-delay: 140ms; }
+.stagger-in > *:nth-child(4)  { animation-delay: 190ms; }
+.stagger-in > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger-in > *:nth-child(6)  { animation-delay: 290ms; }
+.stagger-in > *:nth-child(7)  { animation-delay: 340ms; }
+.stagger-in > *:nth-child(8)  { animation-delay: 390ms; }
+.stagger-in > *:nth-child(9)  { animation-delay: 440ms; }
+.stagger-in > *:nth-child(10) { animation-delay: 490ms; }
+.stagger-in > *:nth-child(11) { animation-delay: 540ms; }
+.stagger-in > *:nth-child(12) { animation-delay: 590ms; }
+.stagger-in > *:nth-child(n+13) { animation-delay: 640ms; }
+
+/* Pulse-glow on section heading accent bar. */
+@keyframes accent-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+}
+.accent-glow {
+  animation: accent-glow 2.4s ease-in-out infinite;
+}
+
+/* Floating badge / icon motion. */
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.gentle-float {
+  animation: gentle-float 3.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .success-circle,
   .success-tick {
@@ -475,5 +546,20 @@ body {
   .fade-up {
     animation: none;
     opacity: 1;
+  }
+  .product-breathe,
+  .accent-glow,
+  .gentle-float {
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .stagger-in > * {
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
 }

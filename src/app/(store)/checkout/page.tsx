@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Banknote, CreditCard, Loader2, Lock, LogIn, MapPin, Smartphone, Store, Truck, User } from "lucide-react";
+import { ArrowLeft, Banknote, CreditCard, Loader2, Lock, MapPin, Smartphone, Store, Truck, User } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError, useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
@@ -21,11 +21,17 @@ type Errors = Partial<Record<keyof Form, string>>;
 const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validate(f: Form, zone: Zone): Errors {
+function validate(f: Form, zone: Zone, emailRequired: boolean): Errors {
   const e: Errors = {};
   if (f.name.trim().length < 2) e.name = "Please enter your full name.";
   if (!BD_PHONE.test(f.phone.replace(/[\s-]/g, ""))) e.phone = "Enter a valid Bangladeshi mobile number (e.g. 01712345678).";
-  if (f.email.trim() && !EMAIL.test(f.email)) e.email = "Enter a valid email address.";
+  // Guests must provide an email — order confirmation and status updates go there.
+  // Signed-in users already have an email on file; we fall back to that server-side.
+  if (!f.email.trim()) {
+    if (emailRequired) e.email = "Email is required so we can send you order updates.";
+  } else if (!EMAIL.test(f.email)) {
+    e.email = "Enter a valid email address.";
+  }
   if (f.address.trim().length < 5) e.address = "Please enter your full delivery address.";
   if (zone === "outside" && f.city.trim().length < 2) e.city = "Please enter your city / district.";
   if (f.area.trim().length < 2) e.area = "Please enter your area.";
@@ -157,27 +163,6 @@ export default function CheckoutPage() {
 
   if (authLoading || !cart.hydrated) return <Skeleton />;
 
-  // Orders are placed from the signed-in customer's backend cart.
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-xl mx-auto px-4 pt-14 text-center">
-        <div className="w-20 h-20 mx-auto rounded-full bg-brand-50 flex items-center justify-center mb-5">
-          <LogIn className="w-9 h-9 text-brand-600" />
-        </div>
-        <h1 className="text-2xl font-black text-navy-700">Sign in to place your order</h1>
-        <p className="text-slate-500 mt-2 mb-6">Your cart is saved. After signing in it moves to your account and you can finish checkout.</p>
-        <div className="flex justify-center gap-3">
-          <Link href="/login?redirect=/checkout" className="px-7 py-3.5 rounded-full text-sm font-bold text-white btn-primary-gradient">
-            Sign in
-          </Link>
-          <Link href="/register?redirect=/checkout" className="px-7 py-3.5 rounded-full text-sm font-bold text-navy-700 border-2 border-navy-700">
-            Create account
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   if (cart.lines.length === 0) {
     return (
       <div className="max-w-3xl mx-auto px-4 pt-14 text-center">
@@ -209,7 +194,7 @@ export default function CheckoutPage() {
       toast.error("Remove the unavailable items from your cart first.");
       return;
     }
-    const found = validate(form, zone);
+    const found = validate(form, zone, !isAuthenticated);
     setErrors(found);
     if (Object.keys(found).length > 0) {
       toast.error("Please fix the highlighted fields.");
@@ -217,30 +202,57 @@ export default function CheckoutPage() {
     }
 
     setPlacing(true);
+    const payload = {
+      customerName: form.name.trim(),
+      phoneNumber: form.phone.replace(/[\s-]/g, ""),
+      email: form.email.trim() || undefined,
+      shippingAddress: form.address.trim(),
+      city: zone === "dhaka" ? "Dhaka" : form.city.trim(),
+      area: form.area.trim(),
+      orderNotes: form.note.trim() || undefined,
+      paymentMethod: "CASH_ON_DELIVERY" as const,
+      fulfillmentMethod,
+      couponCode: coupon?.code,
+      // Admin fields only — backend returns 403 if a non-admin sends them.
+      ...(canUseAdminDiscount && parsedAdminValue > 0
+        ? { adminDiscountType, adminDiscountValue: parsedAdminValue }
+        : {}),
+    };
+
     try {
-      const res = await api<Order>("/orders", {
+      if (isAuthenticated) {
+        // Signed-in: cart lives on the backend, order endpoint pulls from it.
+        const res = await api<Order>("/orders", { method: "POST", body: JSON.stringify(payload) });
+        await cart.refresh();
+        toast.success(res.message || "Order placed successfully!");
+        router.replace(`/order-success/${res.data._id}`);
+        return;
+      }
+
+      // Guest: send cart items inline. Call /orders/guest without the Bearer header.
+      const items = cart.lines
+        .filter((l) => l.isAvailable)
+        .map((l) =>
+          l.type === "combo" && l.comboId
+            ? { comboId: l.comboId, quantity: l.quantity }
+            : { productId: l.productId, quantity: l.quantity, size: l.size ?? undefined }
+        );
+      const guestRes = await fetch("/api/v1/orders/guest", {
         method: "POST",
-        body: JSON.stringify({
-          customerName: form.name.trim(),
-          phoneNumber: form.phone.replace(/[\s-]/g, ""),
-          email: form.email.trim() || undefined,
-          shippingAddress: form.address.trim(),
-          city: zone === "dhaka" ? "Dhaka" : form.city.trim(),
-          area: form.area.trim(),
-          orderNotes: form.note.trim() || undefined,
-          paymentMethod: "CASH_ON_DELIVERY",
-          fulfillmentMethod,
-          couponCode: coupon?.code,
-          // Admin fields only — backend returns 403 if a non-admin sends them.
-          ...(canUseAdminDiscount && parsedAdminValue > 0
-            ? { adminDiscountType, adminDiscountValue: parsedAdminValue }
-            : {}),
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, items }),
       });
-      // The backend empties the cart when the order is created.
-      await cart.refresh();
-      toast.success(res.message || "Order placed successfully!");
-      router.replace(`/order-success/${res.data._id}`);
+      const guestBody = (await guestRes.json().catch(() => null)) as { success?: boolean; message?: string; data?: Order } | null;
+      if (!guestRes.ok || !guestBody?.success || !guestBody.data) {
+        throw new ApiError(guestBody?.message || `Request failed (${guestRes.status})`, guestRes.status);
+      }
+      await cart.clear();
+      toast.success(guestBody.message || "Order placed successfully!");
+      const phone = form.phone.replace(/[\s-]/g, "");
+      const num = guestBody.data.orderNumber;
+      // Guests cannot open /order-success (that reads /orders/:id, which needs auth).
+      // Send them to the public track-order page prefilled with their order details instead.
+      router.replace(`/track-order?orderNumber=${encodeURIComponent(num)}&phone=${encodeURIComponent(phone)}`);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to place order. Please try again.");
       if (err instanceof ApiError && err.status === 409) await cart.refresh();
@@ -274,8 +286,21 @@ export default function CheckoutPage() {
                 <input value={form.phone} onChange={(e) => set("phone", e.target.value)} inputMode="tel" autoComplete="tel" placeholder="01XXXXXXXXX" className={inputCls(errors.phone)} />
               </Field>
               <div className="sm:col-span-2">
-                <Field label="Email" error={errors.email} optional>
-                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" placeholder="name@example.com" className={inputCls(errors.email)} />
+                <Field label="Email" error={errors.email} optional={isAuthenticated}>
+                  <input
+                    type="email"
+                    required={!isAuthenticated}
+                    value={form.email}
+                    onChange={(e) => set("email", e.target.value)}
+                    autoComplete="email"
+                    placeholder="name@example.com"
+                    className={inputCls(errors.email)}
+                  />
+                  {!isAuthenticated && (
+                    <span className="mt-1.5 block text-[11px] text-slate-500">
+                      We will email your order confirmation and delivery updates to this address.
+                    </span>
+                  )}
                 </Field>
               </div>
             </div>

@@ -88,7 +88,7 @@ export default function CartDrawer() {
                 <span className="text-xl font-black text-navy-700">{formatPrice(subtotal)}</span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Delivery charge calculated at checkout.{source === "local" && " Sign in at checkout to place your order."}
+                Delivery charge calculated at checkout.{source === "local" && " You can check out as a guest — no account needed."}
               </p>
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <Link href="/cart" onClick={closeDrawer} className="py-3 rounded-full text-sm font-bold text-center text-navy-700 border-2 border-navy-700 hover:bg-navy-50 transition-colors">

@@ -1,35 +1,38 @@
-// Order status flow as enforced by the backend:
-// PENDING → CONFIRMED → PROCESSING → READY_TO_SHIP → SHIPPED → OUT_FOR_DELIVERY → DELIVERED
-// (shortcuts PROCESSING → SHIPPED and SHIPPED → DELIVERED are still allowed),
-// with CANCELLED reachable from PENDING, CONFIRMED, PROCESSING or READY_TO_SHIP. Single source for labels and ordering.
+// The storefront collapses the pipeline to just three visible states:
+// CONFIRMED → DELIVERED, with CANCELLED as a bail-out. Any backend status
+// other than DELIVERED or CANCELLED is shown as CONFIRMED to the customer.
+// Backend accepts the full flow for compatibility; the UI exposes only this
+// simplified set in filters, mutation dropdowns and badges.
 import type { OrderStatus } from "@/lib/backend-types";
 
 export type { OrderStatus };
 
 export const ORDER_STATUSES: OrderStatus[] = [
-  "PENDING",
   "CONFIRMED",
-  "PROCESSING",
-  "READY_TO_SHIP",
-  "SHIPPED",
-  "OUT_FOR_DELIVERY",
   "DELIVERED",
   "CANCELLED",
 ];
 
-/** The happy path, in order. Cancelled is rendered separately rather than as a timeline step. */
-export const ORDER_STATUS_FLOW: OrderStatus[] = ["PENDING", "CONFIRMED", "PROCESSING", "READY_TO_SHIP", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED"];
+/** Simplified happy path shown to the user. Cancelled is rendered separately. */
+export const ORDER_STATUS_FLOW: OrderStatus[] = ["CONFIRMED", "DELIVERED"];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING: "Order Placed",
+  PENDING: "Confirmed",
   CONFIRMED: "Confirmed",
-  PROCESSING: "Processing",
-  READY_TO_SHIP: "Ready to Ship",
-  SHIPPED: "Shipped",
-  OUT_FOR_DELIVERY: "Out for Delivery",
+  PROCESSING: "Confirmed",
+  READY_TO_SHIP: "Confirmed",
+  SHIPPED: "Confirmed",
+  OUT_FOR_DELIVERY: "Confirmed",
   DELIVERED: "Delivered",
   CANCELLED: "Cancelled",
 };
+
+/** Collapses any backend status to one of the three visible states. */
+export function toCustomerStatus(status: string): "CONFIRMED" | "DELIVERED" | "CANCELLED" {
+  if (status === "DELIVERED") return "DELIVERED";
+  if (status === "CANCELLED") return "CANCELLED";
+  return "CONFIRMED";
+}
 
 /** Statuses in which a customer may still cancel their own order. */
 export const CUSTOMER_CANCELLABLE: OrderStatus[] = ["PENDING", "CONFIRMED", "PROCESSING"];
@@ -43,7 +46,7 @@ export function orderStatusLabel(status: string): string {
 
 /** Index of a status within the happy-path flow, or -1 for cancelled / unknown statuses. */
 export function orderStatusFlowIndex(status: string): number {
-  return ORDER_STATUS_FLOW.indexOf(status as OrderStatus);
+  return ORDER_STATUS_FLOW.indexOf(toCustomerStatus(status) as OrderStatus);
 }
 
 /** "24 Oct 2026" style date, or "" when missing. */

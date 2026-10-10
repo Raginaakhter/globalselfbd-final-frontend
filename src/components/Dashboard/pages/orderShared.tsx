@@ -6,7 +6,7 @@ import { CalendarClock, Check, Eye, NotebookPen, Pencil, RefreshCw, Trash, X } f
 import { useAuth } from "@/context/AuthContext";
 import type { AdminOrder, AdminOrderListItem, OrderStatus, PaymentStatus } from "@/lib/backend-types";
 import { PAYMENT_METHOD_LABELS, PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
-import { ORDER_STATUS_FLOW, ORDER_STATUSES, formatShortDate } from "@/lib/order-status";
+import { ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, ORDER_STATUSES, formatShortDate } from "@/lib/order-status";
 import { BASE } from "../AppSidebar";
 import { useApiAction } from "../api";
 import { formatBDT } from "../format";
@@ -72,7 +72,7 @@ export function OrderFilterBar({
         <option value="">All order statuses</option>
         {ORDER_STATUSES.map((s) => (
           <option key={s} value={s}>
-            {s.replace(/_/g, " ")}
+            {ORDER_STATUS_LABELS[s]}
           </option>
         ))}
       </select>
@@ -450,7 +450,7 @@ function QuickStatusModal({ order, onClose, onSaved }: { order: AdminOrderListIt
           <select value={status} onChange={(e) => setStatusVal(e.target.value as OrderStatus)} className={inputClass}>
             {ORDER_STATUSES.map((st) => (
               <option key={st} value={st}>
-                {st.replace(/_/g, " ")}
+                {ORDER_STATUS_LABELS[st]}
               </option>
             ))}
           </select>
