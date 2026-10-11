@@ -1,23 +1,26 @@
-// The storefront collapses the pipeline to just three visible states:
-// CONFIRMED → DELIVERED, with CANCELLED as a bail-out. Any backend status
-// other than DELIVERED or CANCELLED is shown as CONFIRMED to the customer.
-// Backend accepts the full flow for compatibility; the UI exposes only this
-// simplified set in filters, mutation dropdowns and badges.
+// The storefront collapses the backend pipeline to four visible states:
+//   PENDING  → awaiting admin confirmation (new order, no email yet)
+//   CONFIRMED → admin confirmed (email + invoice fired by backend)
+//   DELIVERED → final success
+//   CANCELLED → final failure, rendered as a bail-out
+// Any backend intermediate (PROCESSING / READY_TO_SHIP / SHIPPED / OUT_FOR_DELIVERY)
+// still displays as CONFIRMED to the customer.
 import type { OrderStatus } from "@/lib/backend-types";
 
 export type { OrderStatus };
 
 export const ORDER_STATUSES: OrderStatus[] = [
+  "PENDING",
   "CONFIRMED",
   "DELIVERED",
   "CANCELLED",
 ];
 
-/** Simplified happy path shown to the user. Cancelled is rendered separately. */
-export const ORDER_STATUS_FLOW: OrderStatus[] = ["CONFIRMED", "DELIVERED"];
+/** Visible happy path. Cancelled is rendered separately as a bail-out. */
+export const ORDER_STATUS_FLOW: OrderStatus[] = ["PENDING", "CONFIRMED", "DELIVERED"];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING: "Confirmed",
+  PENDING: "Pending",
   CONFIRMED: "Confirmed",
   PROCESSING: "Confirmed",
   READY_TO_SHIP: "Confirmed",
@@ -27,10 +30,11 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
-/** Collapses any backend status to one of the three visible states. */
-export function toCustomerStatus(status: string): "CONFIRMED" | "DELIVERED" | "CANCELLED" {
+/** Collapses any backend status to one of the four visible states. */
+export function toCustomerStatus(status: string): "PENDING" | "CONFIRMED" | "DELIVERED" | "CANCELLED" {
   if (status === "DELIVERED") return "DELIVERED";
   if (status === "CANCELLED") return "CANCELLED";
+  if (status === "PENDING") return "PENDING";
   return "CONFIRMED";
 }
 

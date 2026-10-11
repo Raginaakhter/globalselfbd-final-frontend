@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import { CalendarClock, CheckCircle2, Circle, PackageCheck, XCircle } from "lucide-react";
+import { CalendarClock, CheckCircle2, Circle, Clock, PackageCheck, XCircle } from "lucide-react";
 import { ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, type OrderStatus, formatShortDate, orderStatusFlowIndex, toCustomerStatus } from "@/lib/order-status";
 
 const STEP_ICONS: Record<OrderStatus, React.ComponentType<{ className?: string }>> = {
-  // All intermediate backend statuses collapse to "Confirmed" in the UI.
-  PENDING: CheckCircle2,
+  // PENDING = awaiting admin confirmation; intermediate backend states collapse to Confirmed.
+  PENDING: Clock,
   CONFIRMED: CheckCircle2,
   PROCESSING: CheckCircle2,
   READY_TO_SHIP: CheckCircle2,
@@ -83,6 +83,8 @@ export function StatusBadge({ status }: { status: string }) {
       ? "bg-rose-50 text-rose-600"
       : simple === "DELIVERED"
       ? "bg-blue-50 text-blue-800"
+      : simple === "PENDING"
+      ? "bg-slate-100 text-slate-600"
       : "bg-emerald-50 text-emerald-700";
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${tone}`}>

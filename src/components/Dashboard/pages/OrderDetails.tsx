@@ -15,6 +15,8 @@ import { formatBDT } from "../format";
 import { ErrorBox, FieldError, Modal, PrimaryButton, Spinner, StatusPill, inputClass, labelClass, useConfirm } from "../ui";
 import { ProductThumb } from "./ProductsCatalog";
 import { PAYMENT_METHOD_LABELS, formatDate, formatDateTime, useOrderMutations } from "./orderShared";
+import SendToSteadfast from "./courier/SendToSteadfast";
+import { DeliveryMethodBadge } from "./courier/shared";
 
 const MAX_REASON = 500;
 const MAX_NOTE = 1000;
@@ -98,11 +100,13 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
     }
   };
 
-  // UI exposes only Confirmed → Delivered / Cancelled; the backend accepts the
-  // full flow but admins only need these two transitions.
+  // Visible flow: Pending → Confirmed → Delivered, with Cancel reachable from
+  // either Pending or Confirmed. Backend still accepts intermediate statuses.
   const computeFallbackStatuses = (curr: OrderStatus): OrderStatus[] => {
     const simple = toCustomerStatus(curr);
     if (simple === "CANCELLED" || simple === "DELIVERED") return [];
+    if (simple === "PENDING") return ["CONFIRMED", "CANCELLED"];
+    // CONFIRMED (and any intermediate state collapsed to CONFIRMED)
     return ["DELIVERED", "CANCELLED"];
   };
 
@@ -140,6 +144,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <SendToSteadfast order={o} onBooked={order.reload} />
           {canInvoice && (
             <button
               onClick={openInvoice}
@@ -164,6 +169,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
               Store Pickup
             </span>
           )}
+          <DeliveryMethodBadge value={(o as unknown as { deliveryMethod?: "MANUAL" | "STEADFAST" }).deliveryMethod ?? "MANUAL"} />
           {o.isPreOrder && (
             <span className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm">
               <CalendarClock className="h-3.5 w-3.5" /> Pre-Order
@@ -282,7 +288,7 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
                     onClick={() => changeStatus(s)}
                     className={`cursor-pointer rounded-xl px-3 py-2 text-xs font-bold text-white disabled:opacity-50 ${s === "CANCELLED" ? "bg-rose-600 hover:bg-rose-700" : "bg-blue-600 hover:bg-blue-700"}`}
                   >
-                    {s === "CANCELLED" ? "Cancel order" : `Mark ${s.replace(/_/g, " ").toLowerCase()}`}
+                    {s === "CANCELLED" ? "Cancel order" : s === "CONFIRMED" ? "Confirm order" : `Mark ${s.replace(/_/g, " ").toLowerCase()}`}
                   </button>
                 ))}
               </div>

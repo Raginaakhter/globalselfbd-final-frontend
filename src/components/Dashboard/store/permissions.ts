@@ -1,6 +1,7 @@
 import {
   History,
   Truck,
+  TruckElectric,
   BadgeCheck,
   Bell,
   Boxes,
@@ -37,6 +38,7 @@ export type ModuleKey =
   | "orders"
   | "pre-orders"
   | "inventory"
+  | "courier"
   | "payments"
   | "invoices"
   | "users"
@@ -76,6 +78,7 @@ export const MODULES: ModuleDef[] = [
   { key: "orders", title: "Orders", path: `${BASE}/orders`, icon: ListOrdered, section: "main", menuKey: "orders", editAny: ["orders.status", "orders.paymentStatus", "orders.delete"] },
   { key: "pre-orders", title: "Pre-Orders", path: `${BASE}/pre-orders`, icon: CalendarClock, section: "main", viewAny: ["orders.viewAll", "orders.viewOwn", "orders.viewAssigned"], editAny: ["orders.update", "orders.status", "orders.delete"] },
   { key: "inventory", title: "Inventory", path: `${BASE}/inventory`, icon: Boxes, section: "main", viewAny: ["inventory.view", "suppliers.view", "shipments.view", "stockRequests.view"], editAny: ["inventory.update", "inventory.create", "inventory.delete", "inventory.adjust", "suppliers.create", "suppliers.update", "suppliers.delete", "shipments.create", "shipments.update", "shipments.delete", "shipments.receive", "stockRequests.update", "stockRequests.delete"] },
+  { key: "courier", title: "Steadfast Courier", path: `${BASE}/courier`, icon: TruckElectric, section: "main", menuKey: "courier", viewAny: ["courier.view"], editAny: ["courier.book", "courier.sync", "courier.cancel", "courier.returnRequest", "courier.returnReceive", "courier.settlement", "courier.actualFee", "courier.settings"] },
   { key: "payments", title: "Payments", path: `${BASE}/payments`, icon: CreditCard, section: "main", menuKey: "payments", editAny: ["orders.paymentStatus"] },
   { key: "invoices", title: "Invoices", path: `${BASE}/invoices`, icon: FileText, section: "main", menuKey: "invoices", editAny: ["invoices.create"] },
   { key: "users", title: "Users", path: `${BASE}/users`, icon: Users, section: "main", menuKey: "users", editAny: ["users.create", "users.update", "users.delete", "users.changeRole"] },

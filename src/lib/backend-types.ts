@@ -1205,3 +1205,166 @@ export interface ValuationReport {
   }[];
   totals: { costValue: number; sellValue: number };
 }
+
+/* ---------- Steadfast Courier ---------- */
+
+export type CourierBookingStatus = "IN_PROGRESS" | "SUCCESS" | "FAILED" | "UNCERTAIN";
+
+export type CourierDeliveryStatus =
+  | "pending"
+  | "in_review"
+  | "hold"
+  | "delivered"
+  | "partial_delivered"
+  | "cancelled"
+  | "exceptional"
+  | "unknown"
+  | "delivered_approval_pending"
+  | "partial_delivered_approval_pending"
+  | "cancelled_approval_pending"
+  | "unknown_approval_pending";
+
+export type CourierSettlementStatus =
+  | "PENDING"
+  | "PARTIALLY_SETTLED"
+  | "SETTLED"
+  | "UNDER_RECONCILIATION"
+  | "DISPUTED";
+
+export type DeliveryMethod = "MANUAL" | "STEADFAST";
+
+export interface CourierSummary {
+  totalShipments: number;
+  booking: {
+    inProgress: number;
+    success: number;
+    failed: number;
+    uncertain: number;
+  };
+  delivery: Record<CourierDeliveryStatus, number>;
+  settlement: {
+    pending: number;
+    partiallySettled: number;
+    settled: number;
+    underReconciliation: number;
+    disputed: number;
+  };
+  totals: {
+    codSubmitted: number;
+    codReceived: number;
+    codOutstanding: number;
+    configuredCharge: number;
+    actualCharge: number;
+  };
+  courierBalance: number | null;
+  configured: boolean;
+}
+
+export interface CourierShipmentListItem {
+  _id: string;
+  orderNumber: string;
+  invoice: string;
+  consignmentId: string | null;
+  trackingCode: string | null;
+  customerName: string;
+  customerPhone: string;
+  bookingStatus: CourierBookingStatus;
+  deliveryStatus: CourierDeliveryStatus;
+  settlementStatus: CourierSettlementStatus;
+  codAmountSubmitted: number;
+  codAmountReceived: number;
+  codOutstanding: number;
+  configuredCharge: number;
+  actualCharge: number | null;
+  orderTotal: number;
+  isFinalDelivered: boolean;
+  returnRequestedAt: string | null;
+  cancellationRequestedAt: string | null;
+  createdAt: string;
+}
+
+export interface CourierShipmentItem {
+  productId?: string;
+  productTitle: string;
+  variant?: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface CourierShipmentDetail extends Omit<CourierShipmentListItem, "customerName" | "customerPhone"> {
+  courierInvoice: string | null;
+  bookingAttemptedAt: string | null;
+  bookingSucceededAt: string | null;
+  bookingFailureReason?: string | null;
+  lastDeliveryStatusSyncedAt: string | null;
+  lastDeliveryStatusSyncError?: string | null;
+  customerName: string;
+  customerPhone: string;
+  customerAltPhone?: string | null;
+  deliveryAddress: string;
+  items: CourierShipmentItem[];
+  subtotal: number;
+  discount: number;
+  shippingCost: number;
+  advancePaid: number;
+  cancellationApiResponse?: string | null;
+  returnReceivedAt?: string | null;
+  returnInspectionCompletedAt?: string | null;
+  lastSettlementRecordedAt?: string | null;
+}
+
+export interface CourierStatusEvent {
+  _id: string;
+  previousStatus: CourierDeliveryStatus | null;
+  newStatus: CourierDeliveryStatus;
+  isTransition: boolean;
+  source: "API_POLL" | "WEBHOOK" | "MANUAL" | string;
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface CourierReturnRequest {
+  _id: string;
+  status: "REQUESTED" | "PARCEL_RECEIVED" | "RESTOCKED" | string;
+  reason?: string;
+  parcelReceivedAt?: string | null;
+  stockRestoredAt?: string | null;
+  inspectionNotes?: string | null;
+  createdAt: string;
+}
+
+export interface CourierSettlement {
+  _id: string;
+  amount: number;
+  receivedAt: string;
+  source: string;
+  payoutId?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface CourierShipmentFullResponse {
+  shipment: CourierShipmentDetail;
+  events: CourierStatusEvent[];
+  returnRequests: CourierReturnRequest[];
+  settlements: CourierSettlement[];
+}
+
+export interface CourierSettings {
+  outboundCharge: number;
+  returnCharge: number;
+  configured: boolean;
+}
+
+export interface CourierBookingResponse {
+  _id: string;
+  consignmentId: string | null;
+  trackingCode: string | null;
+  bookingStatus: CourierBookingStatus;
+  deliveryStatus: CourierDeliveryStatus;
+  codAmountSubmitted: number;
+  settlementStatus: CourierSettlementStatus;
+  bookingFailureReason?: string;
+}
