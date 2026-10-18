@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { Eye } from "lucide-react";
-import type { Category, InventoryRow, StockStatus } from "@/lib/backend-types";
+import type { Category, InventoryRow, PreOrderSource, StockStatus } from "@/lib/backend-types";
 import { qs, useApiQuery, type Pagination } from "../../api";
 import { formatBDT } from "../../format";
 import {
@@ -33,10 +34,32 @@ const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: "titleAsc", label: "Title A → Z" },
 ];
 
+const PRE_ORDER_SOURCE_OPTIONS: { value: PreOrderSource | ""; label: string }[] = [
+  { value: "", label: "All pre-order states" },
+  { value: "AUTO", label: "Auto pre-order (stock-out)" },
+  { value: "MANUAL", label: "Manual pre-order" },
+  { value: "NONE", label: "Not pre-order" },
+];
+
+function parsePreOrderSource(raw: string | null): PreOrderSource | "" {
+  return raw === "AUTO" || raw === "MANUAL" || raw === "NONE" ? raw : "";
+}
+
 export default function InventoryProductsPage() {
+  return (
+    <Suspense fallback={<Spinner label="Loading inventory..." />}>
+      <InventoryProductsPageInner />
+    </Suspense>
+  );
+}
+
+function InventoryProductsPageInner() {
+  const sp = useSearchParams();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [stockStatus, setStockStatus] = useState<StockStatus | "">("");
+  // Seed from URL so the inventory Overview KPI tiles can deep-link into this view.
+  const [preOrderSource, setPreOrderSource] = useState<PreOrderSource | "">(parsePreOrderSource(sp?.get("preOrderSource") ?? null));
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const debounced = useDebounced(search);
@@ -47,6 +70,7 @@ export default function InventoryProductsPage() {
       search: debounced,
       category,
       stockStatus,
+      preOrderSource,
       sort,
       page,
       limit: 20,
@@ -82,6 +106,18 @@ export default function InventoryProductsPage() {
         >
           {STOCK_STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className={selectClass}
+          value={preOrderSource}
+          onChange={(e) => { setPreOrderSource(parsePreOrderSource(e.target.value || null)); setPage(1); }}
+          title="Pre-order status"
+        >
+          {PRE_ORDER_SOURCE_OPTIONS.map((o) => (
+            <option key={o.value || "any"} value={o.value}>
               {o.label}
             </option>
           ))}
@@ -132,9 +168,7 @@ export default function InventoryProductsPage() {
                       >
                         {row.productTitle}
                       </Link>
-                      {row.isPreOrder && (
-                        <div className="mt-0.5 text-[10px] font-extrabold uppercase text-purple-600">Pre-order</div>
-                      )}
+                      {row.isPreOrder && <PreOrderChip source={row.preOrderSource ?? null} />}
                     </td>
                     <td className="px-3 py-4 font-mono text-slate-500">{row.sku || "—"}</td>
                     <td className="px-3 py-4 text-right font-semibold text-slate-800">{row.stock.toLocaleString()}</td>
@@ -168,4 +202,29 @@ export default function InventoryProductsPage() {
       </div>
     </div>
   );
+}
+
+function PreOrderChip({ source }: { source: PreOrderSource | null }) {
+  // Backend may omit preOrderSource on older versions — fall back to a generic badge.
+  if (source === "AUTO") {
+    return (
+      <div
+        className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-violet-700"
+        title="Backend auto-flipped this product to pre-order because stock hit 0."
+      >
+        Pre-order · Auto
+      </div>
+    );
+  }
+  if (source === "MANUAL") {
+    return (
+      <div
+        className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-fuchsia-200 bg-fuchsia-50 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-fuchsia-700"
+        title="Admin marked this product as pre-order — never auto-reverted on restock."
+      >
+        Pre-order · Manual
+      </div>
+    );
+  }
+  return <div className="mt-0.5 text-[10px] font-extrabold uppercase text-purple-600">Pre-order</div>;
 }

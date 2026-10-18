@@ -1,12 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import {
   AlertTriangle,
   Boxes,
+  CalendarClock,
   Factory,
   PackageOpen,
   PackageX,
   ReceiptText,
+  Sparkles,
   TrendingUp,
   Truck,
   Wallet,
@@ -17,6 +20,7 @@ import type { InventorySummary } from "@/lib/backend-types";
 import { useApiQuery } from "../../api";
 import { formatBDT } from "../../format";
 import { ErrorBox, PageHeader, Spinner } from "../../ui";
+import { INVENTORY_BASE } from "./shared";
 
 interface Card {
   key: string;
@@ -25,6 +29,8 @@ interface Card {
   icon: LucideIcon;
   tone: string;
   hint?: string;
+  /** When set, the whole tile is a link to this URL. */
+  href?: string;
 }
 
 export default function OverviewPage() {
@@ -42,6 +48,24 @@ export default function OverviewPage() {
     { key: "reserved", label: "Reserved", value: d.reservedStock.toLocaleString(), icon: ReceiptText, tone: "bg-indigo-50 text-indigo-700" },
     { key: "low", label: "Low stock", value: d.lowStockCount.toLocaleString(), icon: AlertTriangle, tone: "bg-amber-50 text-amber-700" },
     { key: "out", label: "Out of stock", value: d.outOfStockCount.toLocaleString(), icon: PackageX, tone: "bg-rose-50 text-rose-700" },
+    {
+      key: "preAuto",
+      label: "Auto pre-order",
+      value: (d.autoPreOrderCount ?? 0).toLocaleString(),
+      icon: Sparkles,
+      tone: "bg-violet-50 text-violet-700",
+      hint: "Stock-out, still buyable",
+      href: `${INVENTORY_BASE}/products?preOrderSource=AUTO`,
+    },
+    {
+      key: "preManual",
+      label: "Manual pre-order",
+      value: (d.manualPreOrderCount ?? 0).toLocaleString(),
+      icon: CalendarClock,
+      tone: "bg-fuchsia-50 text-fuchsia-700",
+      hint: "Admin-marked",
+      href: `${INVENTORY_BASE}/products?preOrderSource=MANUAL`,
+    },
     { key: "damaged", label: "Damaged", value: d.damagedQuantity.toLocaleString(), icon: PackageOpen, tone: "bg-rose-50 text-rose-700" },
     { key: "returned", label: "Returned", value: d.returnedQuantity.toLocaleString(), icon: PackageOpen, tone: "bg-slate-100 text-slate-700" },
   ];
@@ -84,8 +108,8 @@ export default function OverviewPage() {
 
 function StatCard({ card }: { card: Card }) {
   const Icon = card.icon;
-  return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+  const inner = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase">{card.label}</span>
         <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${card.tone}`}>
@@ -94,6 +118,17 @@ function StatCard({ card }: { card: Card }) {
       </div>
       <div className="mt-2 text-xl font-extrabold text-slate-900">{card.value}</div>
       {card.hint && <div className="mt-0.5 text-[11px] font-semibold text-slate-400">{card.hint}</div>}
-    </div>
+    </>
   );
+  if (card.href) {
+    return (
+      <Link
+        href={card.href}
+        className="block rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">{inner}</div>;
 }

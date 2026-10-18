@@ -91,17 +91,24 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               )}
             </div>
 
-            {product.isPreOrder ? (
-              <p className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-violet-700 bg-violet-50 border border-violet-200 px-3 py-1.5 rounded-xl w-fit">
-                <Truck className="w-4 h-4 text-violet-600" />
-                Pre-Order · Delivery in {product.preOrderMinDays ?? 15}+ days
-              </p>
-            ) : (
-              <p className={`mt-3 inline-flex items-center gap-2 text-sm font-bold ${outOfStock ? "text-rose-600" : "text-brand-700"}`}>
-                {outOfStock ? <CircleX className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                {outOfStock ? "Out of stock" : "In stock — ready to ship"}
-              </p>
-            )}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {product.isPreOrder ? (
+                <p className="inline-flex items-center gap-2 text-sm font-bold text-violet-700 bg-violet-50 border border-violet-200 px-3 py-1.5 rounded-xl w-fit">
+                  <Truck className="w-4 h-4 text-violet-600" />
+                  Pre-Order · Delivery in {product.preOrderMinDays ?? 15}+ days
+                </p>
+              ) : (
+                <p className={`inline-flex items-center gap-2 text-sm font-bold ${outOfStock ? "text-rose-600" : "text-brand-700"}`}>
+                  {outOfStock ? <CircleX className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {outOfStock ? "Out of stock" : "In stock — ready to ship"}
+                </p>
+              )}
+              {product.freeDelivery && !outOfStock && (
+                <p className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl w-fit">
+                  <Truck className="w-4 h-4 text-emerald-600" /> Free delivery
+                </p>
+              )}
+            </div>
 
             {product.productDescription && <p className="text-sm text-slate-600 leading-relaxed mt-4 whitespace-pre-line">{product.productDescription}</p>}
 

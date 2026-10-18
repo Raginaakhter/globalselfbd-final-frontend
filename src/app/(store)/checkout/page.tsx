@@ -21,14 +21,13 @@ type Errors = Partial<Record<keyof Form, string>>;
 const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validate(f: Form, zone: Zone, emailRequired: boolean): Errors {
+function validate(f: Form, zone: Zone): Errors {
   const e: Errors = {};
   if (f.name.trim().length < 2) e.name = "Please enter your full name.";
   if (!BD_PHONE.test(f.phone.replace(/[\s-]/g, ""))) e.phone = "Enter a valid Bangladeshi mobile number (e.g. 01712345678).";
-  // Guests must provide an email — order confirmation and status updates go there.
-  // Signed-in users already have an email on file; we fall back to that server-side.
+  // Email + phone both required for the delivery SMS + email confirmation to go out.
   if (!f.email.trim()) {
-    if (emailRequired) e.email = "Email is required so we can send you order updates.";
+    e.email = "Email is required so we can send you order updates.";
   } else if (!EMAIL.test(f.email)) {
     e.email = "Enter a valid email address.";
   }
@@ -194,7 +193,7 @@ export default function CheckoutPage() {
       toast.error("Remove the unavailable items from your cart first.");
       return;
     }
-    const found = validate(form, zone, !isAuthenticated);
+    const found = validate(form, zone);
     setErrors(found);
     if (Object.keys(found).length > 0) {
       toast.error("Please fix the highlighted fields.");
@@ -286,21 +285,19 @@ export default function CheckoutPage() {
                 <input value={form.phone} onChange={(e) => set("phone", e.target.value)} inputMode="tel" autoComplete="tel" placeholder="01XXXXXXXXX" className={inputCls(errors.phone)} />
               </Field>
               <div className="sm:col-span-2">
-                <Field label="Email" error={errors.email} optional={isAuthenticated}>
+                <Field label="Email" error={errors.email}>
                   <input
                     type="email"
-                    required={!isAuthenticated}
+                    required
                     value={form.email}
                     onChange={(e) => set("email", e.target.value)}
                     autoComplete="email"
                     placeholder="name@example.com"
                     className={inputCls(errors.email)}
                   />
-                  {!isAuthenticated && (
-                    <span className="mt-1.5 block text-[11px] text-slate-500">
-                      We will email your order confirmation and delivery updates to this address.
-                    </span>
-                  )}
+                  <span className="mt-1.5 block text-[11px] text-slate-500">
+                    Email confirmation goes here; SMS updates go to the mobile number above.
+                  </span>
                 </Field>
               </div>
             </div>

@@ -44,6 +44,11 @@ export interface Product {
   isPreOrder?: boolean;
   /** Promised fulfilment window in days (≥ 15 when isPreOrder, 0 otherwise). */
   preOrderMinDays?: number;
+  /**
+   * Ships at no shipping cost when every billable line in the cart is a product with this flag true.
+   * Backend clamps to false when customerSpecialPrice is set (discounted products always pay shipping).
+   */
+  freeDelivery?: boolean;
   /** Staff with inventory.view only */
   stock?: number;
   /** Staff with products.update only */
@@ -469,6 +474,8 @@ export interface SalesChart {
 
 export interface ShippingSettings {
   currency: string;
+  /** Site-wide kill switch. When false, every order's shipping cost is forced to 0 regardless of other rules. */
+  deliveryChargesEnabled: boolean;
   insideDhaka: number;
   outsideDhaka: number;
   /** Backend free-delivery threshold (0 = off). Not shown on the website. */
@@ -476,6 +483,151 @@ export interface ShippingSettings {
   rule: string;
   /** Only with ?city= on GET /api/public/shipping: the exact charge the order will use. */
   quote?: { city: string; area: "INSIDE_DHAKA" | "OUTSIDE_DHAKA"; subtotal: number; charge: number };
+}
+
+/** GET/PUT /api/settings/preorder — controls the backend's auto pre-order behaviour. */
+export interface PreOrderSettings {
+  /** When true, a product auto-flips to isPreOrder on stock-out (and reverts on restock). */
+  autoEnableOnStockOut: boolean;
+  /** Delivery window applied when auto-enabling (whole number, PRE_ORDER_MIN_DAYS..PRE_ORDER_MAX_DAYS). */
+  defaultPreOrderDays: number;
+  /** Business floor, read-only. */
+  minDeliveryDays: number;
+  /** Business ceiling, read-only. */
+  maxDeliveryDays: number;
+}
+
+/* ---------- Accounting (expenses + P&L) ---------- */
+
+export type ExpenseType =
+  | "AD_COST"
+  | "DELIVERY_COST"
+  | "DAMAGE_COST"
+  | "SALARY"
+  | "RENT"
+  | "UTILITY"
+  | "PACKAGING"
+  | "COMMISSION"
+  | "OTHER";
+
+export const EXPENSE_TYPES: ExpenseType[] = [
+  "AD_COST",
+  "DELIVERY_COST",
+  "DAMAGE_COST",
+  "SALARY",
+  "RENT",
+  "UTILITY",
+  "PACKAGING",
+  "COMMISSION",
+  "OTHER",
+];
+
+export const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
+  AD_COST: "Ad cost",
+  DELIVERY_COST: "Delivery cost",
+  DAMAGE_COST: "Damage cost",
+  SALARY: "Salary",
+  RENT: "Rent",
+  UTILITY: "Utility",
+  PACKAGING: "Packaging",
+  COMMISSION: "Commission",
+  OTHER: "Other",
+};
+
+export interface Expense {
+  _id: string;
+  type: ExpenseType;
+  amount: number;
+  description: string;
+  expenseDate: string;
+  paidVia?: string | null;
+  /** Populated on GET /:id, string ref elsewhere. */
+  orderId?: string | { _id: string; orderNumber: string; totalAmount: number } | null;
+  productId?: string | { _id: string; productTitle: string; sku?: string } | null;
+  createdBy?: string | { _id: string; fullName?: string; email?: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** GET /api/admin/expenses/summary — totals + per-type breakdown over a date range. */
+export interface ExpensesSummary {
+  currency: string;
+  from: string;
+  to: string;
+  total: number;
+  count: number;
+  byType: { type: ExpenseType; amount: number; count: number }[];
+}
+
+export interface PnlPeriodTotals {
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+  expensesTotal: number;
+  expensesByType: Partial<Record<ExpenseType, number>>;
+  netProfit: number;
+  margin: number;
+  orders: number;
+  shippingCollected: number;
+  discount: number;
+  adminDiscount: number;
+}
+
+export type PnlPeriodKey =
+  | "today"
+  | "yesterday"
+  | "last7Days"
+  | "last14Days"
+  | "last30Days"
+  | "last6Months"
+  | "last1Year";
+
+export interface PnlPeriod {
+  key: PnlPeriodKey;
+  label: string;
+  from: string;
+  to: string;
+  totals: PnlPeriodTotals;
+}
+
+/** GET /api/reports/pnl — rolling-windows mode (no fromDate/toDate query). */
+export interface PnlRollingReport {
+  currency: string;
+  timezone: string;
+  periods: PnlPeriod[];
+}
+
+/** GET /api/reports/pnl?fromDate=&toDate= — single custom range. */
+export interface PnlCustomRangeReport {
+  currency: string;
+  timezone: string;
+  range: { from: string; to: string; label: string };
+  totals: PnlPeriodTotals;
+}
+
+export type PnlReport = PnlRollingReport | PnlCustomRangeReport;
+
+export const isPnlRolling = (r: PnlReport): r is PnlRollingReport => "periods" in r;
+
+/** GET /api/admin/orders/:id/profit — full breakdown for one order. */
+export interface OrderProfit {
+  currency: string;
+  orderId: string;
+  orderNumber: string;
+  orderStatus: OrderStatus;
+  paymentStatus: PaymentStatus;
+  units: number;
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+  shippingCollected: number;
+  discount: number;
+  adminDiscount: number;
+  expensesTotal: number;
+  expensesByType: Partial<Record<ExpenseType, number>>;
+  netProfit: number;
+  margin: number;
+  note: string | null;
 }
 
 /* ---------- Newsletter ---------- */
@@ -997,9 +1149,16 @@ export interface InventorySummary {
   cogs: number;
   grossProfit: number;
   profitMargin: number;
+  /** SKUs currently auto-flipped to pre-order (stock = 0, still buyable because autoEnableOnStockOut is on). */
+  autoPreOrderCount?: number;
+  /** SKUs an admin manually marked as pre-order (never auto-overridden on restock). */
+  manualPreOrderCount?: number;
   shipments: { total: number; pending: number };
   suppliers: { active: number };
 }
+
+/** How a product became isPreOrder: MANUAL = admin toggled it; AUTO = backend auto-flipped on stock-out; NONE = not a pre-order. */
+export type PreOrderSource = "MANUAL" | "AUTO" | "NONE";
 
 export interface InventoryRow {
   _id: string;
@@ -1019,6 +1178,8 @@ export interface InventoryRow {
   lowStockThreshold: number;
   stockStatus: StockStatus;
   isPreOrder: boolean;
+  /** Present when the admin inventory endpoint returns it; absent on older backend versions. */
+  preOrderSource?: PreOrderSource | null;
   cogs: number;
   profit: number;
   margin: number;

@@ -8,6 +8,7 @@ import {
   CalendarClock,
   GalleryHorizontal,
   Layers,
+  LineChart,
   Megaphone,
   PanelBottom,
   CreditCard,
@@ -18,6 +19,7 @@ import {
   ListOrdered,
   Mail,
   MessageSquare,
+  Receipt,
   Star,
   Ticket,
   Users,
@@ -41,6 +43,8 @@ export type ModuleKey =
   | "courier"
   | "payments"
   | "invoices"
+  | "expenses"
+  | "pnl"
   | "users"
   | "contact-messages"
   | "coupons"
@@ -81,6 +85,8 @@ export const MODULES: ModuleDef[] = [
   { key: "courier", title: "Steadfast Courier", path: `${BASE}/courier`, icon: TruckElectric, section: "main", menuKey: "courier", viewAny: ["courier.view"], editAny: ["courier.book", "courier.sync", "courier.cancel", "courier.returnRequest", "courier.returnReceive", "courier.settlement", "courier.actualFee", "courier.settings"] },
   { key: "payments", title: "Payments", path: `${BASE}/payments`, icon: CreditCard, section: "main", menuKey: "payments", editAny: ["orders.paymentStatus"] },
   { key: "invoices", title: "Invoices", path: `${BASE}/invoices`, icon: FileText, section: "main", menuKey: "invoices", editAny: ["invoices.create"] },
+  { key: "expenses", title: "Expenses", path: `${BASE}/expenses`, icon: Receipt, section: "main", viewAny: ["expenses.view"], editAny: ["expenses.create", "expenses.update", "expenses.delete"] },
+  { key: "pnl", title: "Profit & Loss", path: `${BASE}/pnl`, icon: LineChart, section: "main", viewAny: ["reports.view"], editAny: [] },
   { key: "users", title: "Users", path: `${BASE}/users`, icon: Users, section: "main", menuKey: "users", editAny: ["users.create", "users.update", "users.delete", "users.changeRole"] },
   { key: "contact-messages", title: "Contact Messages", path: `${BASE}/contact-messages`, icon: MessageSquare, section: "main", menuKey: "contactMessages", editAny: ["contactMessages.update", "contactMessages.delete"] },
   { key: "coupons", title: "Coupons", path: `${BASE}/coupons`, icon: Ticket, section: "main", menuKey: "coupons", editAny: ["coupons.create", "coupons.update", "coupons.delete"] },

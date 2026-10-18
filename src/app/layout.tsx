@@ -7,6 +7,7 @@ import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import CartDrawer from "@/components/shop/CartDrawer";
 import WhatsAppWidget from "@/components/landing/WhatsAppWidget";
+import TopProgressBar from "@/components/landing/TopProgressBar";
 import { Toaster } from "sonner";
 import { SiteProvider } from "@/context/SiteContext";
 import { fetchSite } from "@/lib/site-fetch";
@@ -82,6 +83,7 @@ export default async function RootLayout({
           <SiteProvider value={site}>
             <WishlistProvider>
               <CartProvider>
+                <TopProgressBar />
                 {children}
                 <CartDrawer />
                 <WhatsAppWidget />

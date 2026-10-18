@@ -12,7 +12,7 @@ export interface BackendResult<T = unknown> {
 }
 
 /** Calls the backend and always resolves with a JSON body (network failures become 502). */
-// 25s cap — longer than Mocean's slowest realistic response, shorter than browser idle timeouts.
+// 25s cap — longer than Zend SMS's slowest realistic response, shorter than browser idle timeouts.
 const BACKEND_TIMEOUT_MS = 25_000;
 
 export async function callBackend<T = unknown>(path: string, init: RequestInit = {}): Promise<BackendResult<T>> {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarClock } from "lucide-react";
+import { ArrowLeft, CalendarClock, Truck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import type { Product, ProductOptions } from "@/lib/backend-types";
 import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
@@ -32,6 +32,7 @@ interface FormState {
   status: "ACTIVE" | "INACTIVE";
   isPreOrder: boolean;
   preOrderMinDays: string;
+  freeDelivery: boolean;
 }
 
 const toForm = (p?: Product | null): FormState => ({
@@ -52,6 +53,7 @@ const toForm = (p?: Product | null): FormState => ({
   status: p?.status ?? "ACTIVE",
   isPreOrder: p?.isPreOrder ?? false,
   preOrderMinDays: p?.isPreOrder && p.preOrderMinDays ? String(p.preOrderMinDays) : String(PRE_ORDER_MIN_DAYS),
+  freeDelivery: p?.freeDelivery ?? false,
 });
 
 export default function ProductForm({ productId }: { productId?: string }) {
@@ -127,6 +129,8 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
       isPreOrder: form.isPreOrder,
       // Backend resets days to 0 when pre-order is off; send it explicitly to keep things in sync
       preOrderMinDays: form.isPreOrder ? Number(form.preOrderMinDays) : 0,
+      // Backend clamps to false silently when the product is discounted — safe to send either way.
+      freeDelivery: form.freeDelivery,
     };
     if (form.slug.trim()) body.slug = form.slug.trim();
     if (form.productCost.trim()) body.productCost = Number(form.productCost);
@@ -282,6 +286,12 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
                 />
               )}
           </section>
+          <FreeDeliverySection
+            value={form.freeDelivery}
+            onChange={(v) => set("freeDelivery", v)}
+            discounted={form.customerSpecialPrice.trim() !== "" && Number(form.customerSpecialPrice) < Number(form.customerSellPrice)}
+            card={card}
+          />
           <section className={card}>
             <h2 className="text-sm font-extrabold text-slate-900">Images</h2>
             <ProductImages thumbnail={form.thumbnail} gallery={form.gallery} onChange={({ thumbnail, gallery }) => setForm((f) => ({ ...f, thumbnail, gallery }))} />
@@ -290,5 +300,33 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
         </div>
       </div>
     </form>
+  );
+}
+
+function FreeDeliverySection({ value, onChange, discounted, card }: { value: boolean; onChange: (v: boolean) => void; discounted: boolean; card: string }) {
+  // Backend rule: discounted products (special price set below sell price) always pay shipping — the toggle is forced off.
+  const forced = discounted;
+  const effective = value && !forced;
+  return (
+    <section className={`${card} ${effective ? "border-emerald-200 bg-gradient-to-br from-emerald-50 to-white" : ""}`}>
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+          <Truck className={`h-4 w-4 ${effective ? "text-emerald-600" : "text-slate-400"}`} /> Free delivery
+        </h2>
+        <Toggle
+          checked={effective}
+          onChange={(v) => (forced ? undefined : onChange(v))}
+          color="peer-checked:bg-emerald-600"
+        />
+      </div>
+      <p className="text-xs text-slate-500">
+        When on, this product ships free as long as every other item in the cart is also marked free delivery. Combo items in the cart always pay shipping.
+      </p>
+      {forced && (
+        <p className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-800">
+          Discounted products always pay delivery. Clear the Special price above to allow free delivery on this product.
+        </p>
+      )}
+    </section>
   );
 }

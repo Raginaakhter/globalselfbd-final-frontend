@@ -16,8 +16,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-// Phone registration disabled temporarily - email OTP only
-// const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
+const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Step = "identifier" | "otp";
@@ -60,17 +59,13 @@ function RegisterForm() {
 
   const normalizedIdentifier = (raw: string) => {
     const trimmed = raw.trim();
-    // Phone support commented out:
-    // if (trimmed.includes("@")) return trimmed.toLowerCase();
-    // return trimmed.replace(/[\s-]/g, "");
-    return trimmed.toLowerCase();
+    if (trimmed.includes("@")) return trimmed.toLowerCase();
+    return trimmed.replace(/[\s-]/g, "");
   };
 
   const identifierIsValid = (raw: string) => {
     const value = normalizedIdentifier(raw);
-    // Phone support commented out:
-    // return EMAIL.test(value) || BD_PHONE.test(value);
-    return EMAIL.test(value);
+    return EMAIL.test(value) || BD_PHONE.test(value);
   };
 
   const handleRequest = async (e: React.FormEvent) => {
@@ -83,9 +78,7 @@ function RegisterForm() {
     }
     const value = normalizedIdentifier(identifier);
     if (!identifierIsValid(value)) {
-      setErrorMsg("Enter a valid email address.");
-      // Phone error message commented out:
-      // setErrorMsg("Enter a valid email or Bangladeshi mobile number (e.g. 01712345678).");
+      setErrorMsg("Enter a valid email or Bangladeshi mobile number (e.g. 01712345678).");
       return;
     }
 
@@ -95,8 +88,7 @@ function RegisterForm() {
 
     if (result) {
       setSentTo(value);
-      setSentChannel(result.channel || "email");
-      // setSentChannel(result.channel || (value.includes("@") ? "email" : "sms"));
+      setSentChannel(result.channel || (value.includes("@") ? "email" : "sms"));
       setCooldown(result.resendAfterSeconds ?? 60);
       setDevOtp(result.devOtp ?? "");
       setStep("otp");
@@ -155,8 +147,7 @@ function RegisterForm() {
     }
   };
 
-  // const channelLabel = sentChannel === "email" ? "email" : "SMS";
-  // const IdentifierIcon = identifier.includes("@") ? Mail : Phone;
+  const IdentifierIcon = identifier.includes("@") ? Mail : Phone;
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -177,11 +168,8 @@ function RegisterForm() {
         </h1>
         <p className="text-sm text-slate-500 mt-1">
           {step === "identifier"
-            ? "Sign up with your email — we'll send a 6-digit verification code."
-            /* Phone register text commented out:
             ? "Sign up with just your phone or email — we'll send a 6-digit code."
-            */
-            : <>We sent a 6-digit verification code to <span className="font-semibold text-slate-800">{sentTo}</span></>}
+            : <>We sent a 6-digit code by {sentChannel === "sms" ? "SMS" : "email"} to <span className="font-semibold text-slate-800">{sentTo}</span></>}
         </p>
       </div>
 
@@ -216,32 +204,28 @@ function RegisterForm() {
               </div>
             </div>
 
-            {/* Email Address */}
+            {/* Phone or Email */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Email Address
-                {/* Phone or Email */}
+                Phone or Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-5 h-5" />
-                  {/* <IdentifierIcon className="w-5 h-5" /> */}
+                  <IdentifierIcon className="w-5 h-5" />
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  inputMode="email"
-                  autoComplete="email"
+                  inputMode={identifier.includes("@") ? "email" : "tel"}
+                  autoComplete={identifier.includes("@") ? "email" : "tel"}
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="you@example.com"
-                  /* placeholder="01712345678 or you@example.com" */
+                  placeholder="01712345678 or you@example.com"
                   className="auth-input"
                 />
               </div>
               <p className="text-[11px] mt-1.5 text-slate-500">
-                We&apos;ll send a 6-digit code to this email. No password required.
-                {/* We&apos;ll send a 6-digit code to this {identifier.includes("@") ? "email" : "phone"}. No password required. */}
+                We&apos;ll send a 6-digit code to this {identifier.includes("@") ? "email" : "phone"}. No password required.
               </p>
             </div>
 
@@ -338,8 +322,7 @@ function RegisterForm() {
                 className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Use a different email</span>
-                {/* <span>Use a different {sentChannel === "email" ? "email" : "phone"}</span> */}
+                <span>Use a different {sentChannel === "email" ? "email" : "phone"}</span>
               </button>
             </div>
           </form>

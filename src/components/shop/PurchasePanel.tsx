@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Heart, ShoppingCart, Zap } from "lucide-react";
+import { CalendarClock, Check, Heart, ShoppingCart, Zap } from "lucide-react";
 import type { StoreProduct } from "@/lib/storefront";
 import { formatPrice } from "@/lib/shop";
 import { useCart } from "@/context/CartContext";
@@ -79,19 +79,26 @@ export default function PurchasePanel({ product }: { product: StoreProduct }) {
           onClick={handleAdd}
           disabled={outOfStock || needsSize || busy}
           className={`py-3.5 px-6 rounded-full text-sm font-black flex items-center justify-center gap-2 border-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-            added ? "bg-brand-600 border-brand-600 text-white scale-[1.02]" : "border-brand-600 text-brand-700 hover:bg-brand-50"
+            added
+              ? "bg-brand-600 border-brand-600 text-white scale-[1.02]"
+              : product.isPreOrder
+                ? "border-violet-600 text-violet-700 hover:bg-violet-50"
+                : "border-brand-600 text-brand-700 hover:bg-brand-50"
           }`}
         >
-          {added ? <Check className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
-          {added ? "Added to cart!" : needsSize ? "Choose a size" : "Add to Cart"}
+          {added ? <Check className="w-5 h-5" /> : product.isPreOrder ? <CalendarClock className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
+          {added ? "Added to cart!" : needsSize ? "Choose a size" : product.isPreOrder ? "Add Pre-Order to Cart" : "Add to Cart"}
         </button>
         <button
           type="button"
           onClick={handleBuyNow}
           disabled={outOfStock || needsSize || busy}
-          className="py-3.5 px-6 rounded-full text-sm font-black flex items-center justify-center gap-2 text-white btn-primary-gradient cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`py-3.5 px-6 rounded-full text-sm font-black flex items-center justify-center gap-2 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+            product.isPreOrder ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:brightness-110" : "btn-primary-gradient"
+          }`}
         >
-          <Zap className="w-5 h-5" /> Buy Now
+          {product.isPreOrder ? <CalendarClock className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+          {product.isPreOrder ? "Pre-Order Now" : "Buy Now"}
         </button>
       </div>
 

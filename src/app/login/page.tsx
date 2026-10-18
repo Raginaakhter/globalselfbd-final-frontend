@@ -18,8 +18,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-// Phone login disabled temporarily - email OTP only
-// const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
+const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Mode = "otp" | "password";
@@ -70,17 +69,13 @@ function LoginForm() {
 
   const normalizedIdentifier = (raw: string) => {
     const trimmed = raw.trim();
-    // Phone support commented out:
-    // if (trimmed.includes("@")) return trimmed.toLowerCase();
-    // return trimmed.replace(/[\s-]/g, "");
-    return trimmed.toLowerCase();
+    if (trimmed.includes("@")) return trimmed.toLowerCase();
+    return trimmed.replace(/[\s-]/g, "");
   };
 
   const identifierIsValid = (raw: string) => {
     const value = normalizedIdentifier(raw);
-    // Phone support commented out:
-    // return EMAIL.test(value) || BD_PHONE.test(value);
-    return EMAIL.test(value);
+    return EMAIL.test(value) || BD_PHONE.test(value);
   };
 
   const goToTarget = () => {
@@ -93,8 +88,7 @@ function LoginForm() {
     setErrorMsg("");
     const value = normalizedIdentifier(identifier);
     if (!identifierIsValid(value)) {
-      setErrorMsg("Enter a valid email address.");
-      // setErrorMsg("Enter a valid email or Bangladeshi mobile number.");
+      setErrorMsg("Enter a valid email or Bangladeshi mobile number.");
       return;
     }
 
@@ -104,8 +98,7 @@ function LoginForm() {
 
     if (result) {
       setSentTo(value);
-      setSentChannel(result.channel || "email");
-      // setSentChannel(result.channel || (value.includes("@") ? "email" : "sms"));
+      setSentChannel(result.channel || (value.includes("@") ? "email" : "sms"));
       setCooldown(result.resendAfterSeconds ?? 60);
       setDevOtp(result.devOtp ?? "");
       setStep("otp");
@@ -164,8 +157,7 @@ function LoginForm() {
     e.preventDefault();
     setErrorMsg("");
     if (!passwordIdentifier || !password) {
-      setErrorMsg("Please enter your email and password.");
-      // setErrorMsg("Please enter your phone number (or email) and password.");
+      setErrorMsg("Please enter your phone number (or email) and password.");
       return;
     }
     setLoading(true);
@@ -174,8 +166,7 @@ function LoginForm() {
     if (success) goToTarget();
   };
 
-  // const IdentifierIcon = identifier.includes("@") ? Mail : Phone;
-  const channelLabel = sentChannel === "sms" ? "SMS" : "email";
+  const IdentifierIcon = identifier.includes("@") ? Mail : Phone;
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -202,11 +193,8 @@ function LoginForm() {
           {mode === "password"
             ? "Sign in with your admin / staff password."
             : step === "identifier"
-              ? "Sign in with your email — we'll send a verification code."
-              /* Phone login text commented out:
               ? "Sign in with your phone or email — we'll text or email a code."
-              */
-              : <>We sent a 6-digit verification code to <span className="font-semibold text-slate-800">{sentTo}</span></>}
+              : <>We sent a 6-digit code by {sentChannel === "sms" ? "SMS" : "email"} to <span className="font-semibold text-slate-800">{sentTo}</span></>}
         </p>
       </div>
 
@@ -222,23 +210,20 @@ function LoginForm() {
           <form onSubmit={handleRequest} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Email Address
-                {/* Phone or Email */}
+                Phone or Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-5 h-5" />
-                  {/* <IdentifierIcon className="w-5 h-5" /> */}
+                  <IdentifierIcon className="w-5 h-5" />
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  inputMode="email"
-                  autoComplete="email"
+                  inputMode={identifier.includes("@") ? "email" : "tel"}
+                  autoComplete={identifier.includes("@") ? "email" : "tel"}
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="you@example.com"
-                  /* placeholder="01712345678 or you@example.com" */
+                  placeholder="01712345678 or you@example.com"
                   className="auth-input"
                 />
               </div>
@@ -341,8 +326,7 @@ function LoginForm() {
                 className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Use a different email</span>
-                {/* <span>Use a different {sentChannel === "email" ? "email" : "phone"}</span> */}
+                <span>Use a different {sentChannel === "email" ? "email" : "phone"}</span>
               </button>
             </div>
           </form>
@@ -352,21 +336,19 @@ function LoginForm() {
           <form onSubmit={handlePasswordLogin} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Email Address
-                {/* Phone or Email */}
+                Phone or Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-5 h-5" />
+                  {passwordIdentifier.includes("@") ? <Mail className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   required
                   autoComplete="username"
                   value={passwordIdentifier}
                   onChange={(e) => setPasswordIdentifier(e.target.value)}
-                  placeholder="you@example.com"
-                  /* placeholder="you@example.com or 01712345678" */
+                  placeholder="you@example.com or 01712345678"
                   className="auth-input"
                 />
               </div>

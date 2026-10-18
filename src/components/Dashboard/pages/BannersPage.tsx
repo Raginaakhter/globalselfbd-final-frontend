@@ -198,8 +198,27 @@ function BannerForm({ banner, placement, onClose, onSaved }: { banner: Banner | 
             <option value="PROMO">Promo card (beside the slider, max 2 active)</option>
           </select>
         </label>
-        <SingleImageField label="Banner image *" value={form.imageUrl} onChange={set("imageUrl")} folder="banners" wide removable={false} hint={form.placement === "PROMO" ? "Card image, e.g. 600×300. Max 5MB." : "Wide image, e.g. 1920×840. Max 5MB."} />
-        <SingleImageField label="Mobile image (optional)" value={form.mobileImageUrl} onChange={set("mobileImageUrl")} folder="banners" wide hint="Shown on phones instead of the main image." />
+        <SingleImageField
+          label="Banner image * (desktop / tablet)"
+          value={form.imageUrl}
+          onChange={set("imageUrl")}
+          folder="banners"
+          wide
+          removable={false}
+          hint={form.placement === "PROMO"
+            ? "16:9 ratio — recommended 800×450 (min 640×360). Max 5MB. Anything off-ratio will be cropped."
+            : "16:9 ratio — recommended 1920×1080 (min 1280×720). Max 5MB. Anything off-ratio will be cropped."}
+        />
+        <SingleImageField
+          label="Mobile image (optional, shown on phones ≤ 640px wide)"
+          value={form.mobileImageUrl}
+          onChange={set("mobileImageUrl")}
+          folder="banners"
+          wide
+          hint={form.placement === "PROMO"
+            ? "16:9 ratio — recommended 640×360 (min 480×270). Max 5MB."
+            : "16:9 ratio — recommended 750×420 (min 640×360). Max 5MB."}
+        />
         <p className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500">Everything below is optional. Leave it empty to show the image only.</p>
         {TEXT_FIELDS.map((f) => (
           <label key={f.key} className="flex flex-col gap-1.5">

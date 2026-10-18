@@ -33,6 +33,8 @@ export interface StoreProduct {
   isPreOrder?: boolean;
   /** Minimum delivery window promised in days (≥ 15). */
   preOrderMinDays?: number;
+  /** Ships at no delivery charge when every item in the cart is also freeDelivery=true. */
+  freeDelivery?: boolean;
   /** Average of APPROVED reviews */
   rating?: ProductRating;
   createdAt: string;

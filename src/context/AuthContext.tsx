@@ -265,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Passwordless step 1: request a 6-digit OTP. Toasts success / error here so callers only
   // react to the outcome. Returns the channel + cooldown so the UI can show "Resend in Xs".
-  // The SMS provider (Mocean) can be slow, so we cap the wait at 20s and show a clear timeout toast
+  // The SMS provider (Zend SMS) can be slow, so we cap the wait at 20s and show a clear timeout toast
   // instead of letting the button spin forever.
   const requestOtp = async (identifier: string): Promise<RequestOtpResult | null> => {
     const controller = new AbortController();

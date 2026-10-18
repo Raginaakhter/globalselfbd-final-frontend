@@ -19,7 +19,7 @@ const sorts = [
 
 type SortKey = (typeof sorts)[number]["key"];
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 16;
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 export default async function PreOrderPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -72,6 +72,9 @@ export default async function PreOrderPage({ searchParams }: { searchParams: Pro
           </h1>
           <p className="text-sm sm:text-base text-violet-100/90 mt-3 leading-relaxed">
             Order authentic imported products directly from UK & USA official sources. We allocate fresh stock specifically for your order with promised 15–30 days fulfilment.
+          </p>
+          <p className="text-xs sm:text-sm text-violet-100/80 mt-2 italic">
+            Items that just sold out appear here automatically — place a pre-order and we&rsquo;ll ship the moment fresh stock arrives.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-4 text-xs font-bold text-violet-200">

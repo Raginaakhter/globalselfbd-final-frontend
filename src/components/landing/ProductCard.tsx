@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Heart, ShoppingBag, Zap } from "lucide-react";
+import { CalendarClock, Check, Heart, ShoppingBag, Truck, Zap } from "lucide-react";
 import { packLabel, type StoreProduct } from "@/lib/storefront";
 import { formatPrice } from "@/lib/shop";
 import { useCart } from "@/context/CartContext";
@@ -73,6 +73,11 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
             ) : discountPercent > 0 ? (
               <span className={`${badgeClass} bg-blue-600`}>{discountPercent}% OFF</span>
             ) : null}
+            {product.freeDelivery && !outOfStock && (
+              <span className={`${badgeClass} bg-emerald-600 inline-flex items-center gap-1`}>
+                <Truck className="h-3 w-3" /> Free delivery
+              </span>
+            )}
           </div>
 
           {discountPercent >= 15 && !outOfStock && (
@@ -109,38 +114,57 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
           {discountAmount > 0 && <span className="text-xs font-semibold text-slate-400 line-through">WAS {formatPrice(rrp)}</span>}
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={outOfStock}
-            aria-label={`Add ${name} to cart`}
-            className="inline-flex items-center justify-center gap-1 rounded-xl border border-blue-600/40 bg-blue-50/50 px-2 py-2 text-[11px] sm:text-xs font-bold text-blue-700 transition-all hover:bg-blue-100 hover:border-blue-600 active:scale-95 whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none"
+        {outOfStock && !product.isPreOrder ? (
+          // Admin disabled auto pre-order OR locked this one manually — point customers to pre-order items instead of a dead card.
+          <Link
+            href="/pre-order"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-2 py-2 text-[11px] sm:text-xs font-black text-violet-700 hover:bg-violet-100 transition-colors"
           >
-            {justAdded ? (
-              <>
-                <Check className="h-3.5 w-3.5 text-blue-600" />
-                <span className="text-blue-600">Added</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag className="h-3.5 w-3.5" />
-                <span>{needsChoice ? "Choose size" : "Add to cart"}</span>
-              </>
-            )}
-          </button>
+            <CalendarClock className="h-3.5 w-3.5" /> View pre-order items
+          </Link>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={outOfStock}
+              aria-label={`Add ${name} to cart`}
+              className={`inline-flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] sm:text-xs font-bold transition-all active:scale-95 whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none ${
+                product.isPreOrder
+                  ? "border border-violet-500/40 bg-violet-50/60 text-violet-700 hover:bg-violet-100 hover:border-violet-500"
+                  : "border border-blue-600/40 bg-blue-50/50 text-blue-700 hover:bg-blue-100 hover:border-blue-600"
+              }`}
+            >
+              {justAdded ? (
+                <>
+                  <Check className={`h-3.5 w-3.5 ${product.isPreOrder ? "text-violet-600" : "text-blue-600"}`} />
+                  <span className={product.isPreOrder ? "text-violet-600" : "text-blue-600"}>Added</span>
+                </>
+              ) : (
+                <>
+                  {product.isPreOrder ? <CalendarClock className="h-3.5 w-3.5" /> : <ShoppingBag className="h-3.5 w-3.5" />}
+                  <span>{needsChoice ? "Choose size" : product.isPreOrder ? "Pre-order" : "Add to cart"}</span>
+                </>
+              )}
+            </button>
 
-          <button
-            type="button"
-            onClick={handleBuyNow}
-            disabled={outOfStock}
-            aria-label={`Buy ${name} now`}
-            className="inline-flex items-center justify-center gap-1 rounded-xl bg-blue-900 hover:bg-blue-950 px-2 py-2 text-[11px] sm:text-xs font-black text-white shadow-sm transition-all hover:brightness-110 active:scale-95 whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <Zap className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
-            <span>Buy now</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              disabled={outOfStock}
+              aria-label={product.isPreOrder ? `Pre-order ${name} now` : `Buy ${name} now`}
+              className={`inline-flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] sm:text-xs font-black text-white shadow-sm transition-all hover:brightness-110 active:scale-95 whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none ${
+                product.isPreOrder
+                  ? "bg-gradient-to-r from-violet-600 to-fuchsia-600"
+                  : "bg-blue-900 hover:bg-blue-950"
+              }`}
+            >
+              {product.isPreOrder ? <CalendarClock className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />}
+              <span>{product.isPreOrder ? "Pre-order now" : "Buy now"}</span>
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );

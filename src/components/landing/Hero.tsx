@@ -27,18 +27,12 @@ function Slide({ banner, eager }: { banner: Banner; eager: boolean }) {
   const hasText = Boolean(banner.title || banner.subtitle || banner.description || banner.buttonText);
   const alt = banner.altText || banner.title || "Banner";
 
+  // object-cover + container that matches the active image's natural aspect = no crop, no bars.
   const picture = (
-    <>
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-60"
-        style={{ backgroundImage: `url("${banner.imageUrl}")` }}
-      />
-      <picture>
-        {banner.mobileImageUrl && <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />}
-        <img src={banner.imageUrl} alt={alt} loading={eager ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-contain object-center" />
-      </picture>
-    </>
+    <picture>
+      {banner.mobileImageUrl && <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />}
+      <img src={banner.imageUrl} alt={alt} loading={eager ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-cover object-center" />
+    </picture>
   );
 
   // Image-only banner: the whole slide is the link (when one is set).
@@ -163,14 +157,9 @@ function PromoCard({ banner }: { banner: Banner }) {
 
   const body = (
     <>
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-center scale-110 blur-2xl opacity-60"
-        style={{ backgroundImage: `url("${banner.imageUrl}")` }}
-      />
       <picture>
         {banner.mobileImageUrl && <source media="(max-width: 639px)" srcSet={banner.mobileImageUrl} />}
-        <img src={banner.imageUrl} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-105" />
+        <img src={banner.imageUrl} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
       </picture>
       <span className="shine-sweep" />
       {hasText && (

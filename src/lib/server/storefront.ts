@@ -2,7 +2,7 @@
 
 import { cache } from "react";
 import type { Pagination, StoreCategory, StoreProduct } from "@/lib/storefront";
-import { EMPTY_FOOTER, type Banner, type Brand, type Combo, type FooterSettings, type HomepageReview, type Offer, type ShippingSettings } from "@/lib/backend-types";
+import { EMPTY_FOOTER, type Banner, type Brand, type Combo, type FooterSettings, type HomepageReview, type Offer, type PreOrderSource, type ShippingSettings } from "@/lib/backend-types";
 import { callBackend } from "./backend";
 
 export async function fetchCategoryTree(): Promise<StoreCategory[]> {
@@ -18,6 +18,8 @@ export interface ProductQuery {
   sort?: string;
   availability?: string;
   isPreOrder?: boolean | string;
+  /** AUTO = flipped by stock-out, MANUAL = admin-set, NONE = not pre-order. */
+  preOrderSource?: PreOrderSource;
   minPrice?: number;
   maxPrice?: number;
 }

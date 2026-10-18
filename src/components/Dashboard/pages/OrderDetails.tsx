@@ -4,10 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarClock, CreditCard, FileText, MapPin, NotebookPen, Package, Pencil, Trash, UserRound } from "lucide-react";
+import { ArrowLeft, CalendarClock, CreditCard, FileText, MapPin, NotebookPen, Package, Pencil, Trash, TrendingDown, TrendingUp, UserRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import type { AdminOrder, Invoice, InvoiceListItem, OrderStatus, PaymentStatus } from "@/lib/backend-types";
-import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
+import type { AdminOrder, ExpenseType, Invoice, InvoiceListItem, OrderProfit, OrderStatus, PaymentStatus } from "@/lib/backend-types";
+import { EXPENSE_TYPE_LABELS, PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
 import { ORDER_STATUS_FLOW, ORDER_STATUS_LABELS, orderStatusFlowIndex, toCustomerStatus } from "@/lib/order-status";
 import { BASE } from "../AppSidebar";
 import { errorMessage, qs, useApiQuery } from "../api";
@@ -272,6 +272,8 @@ export default function OrderDetails({ orderId }: { orderId: string }) {
           </section>
 
           {o.isPreOrder && <PreOrderCard order={o} canEdit={canUpdateOrder} onSaved={order.reload} />}
+
+          {hasPermission("reports.view") && <OrderProfitCard orderId={o._id} />}
 
           <AdminNotesCard order={o} canAdd={canUpdateOrder} onSaved={order.reload} />
         </div>
@@ -617,3 +619,99 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 
 // Cancelled orders cannot get an invoice
 const cancelledOrder = (o: AdminOrder) => o.orderStatus === "CANCELLED";
+
+/** Per-order profit breakdown (GET /admin/orders/:id/profit). Shown to anyone with reports.view. */
+function OrderProfitCard({ orderId }: { orderId: string }) {
+  const profit = useApiQuery<OrderProfit>(`/admin/orders/${encodeURIComponent(orderId)}/profit`);
+  const card = "rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs";
+
+  if (profit.loading && !profit.data) {
+    return <section className={card}><Spinner label="Loading profit breakdown..." /></section>;
+  }
+  if (profit.error) {
+    return (
+      <section className={card}>
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-extrabold text-slate-900">
+          <TrendingUp className="h-4 w-4 text-slate-400" /> Order profit
+        </h2>
+        <ErrorBox message={profit.error} onRetry={profit.reload} />
+      </section>
+    );
+  }
+  if (!profit.data) return null;
+  const p = profit.data;
+  const expenseEntries = Object.entries(p.expensesByType) as [ExpenseType, number][];
+  const positive = p.netProfit >= 0;
+
+  return (
+    <section className={card}>
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-slate-900">
+        <TrendingUp className="h-4 w-4 text-slate-400" /> Order profit
+      </h2>
+
+      <div className="grid grid-cols-2 gap-3">
+        <ProfitStat label="Revenue" value={formatBDT(p.revenue)} tint="bg-blue-50 text-blue-700" icon={<TrendingUp className="h-4 w-4" />} />
+        <ProfitStat label="COGS" value={formatBDT(p.cogs)} tint="bg-amber-50 text-amber-700" icon={<TrendingDown className="h-4 w-4" />} />
+        <ProfitStat label="Gross profit" value={formatBDT(p.grossProfit)} tint="bg-emerald-50 text-emerald-700" icon={<TrendingUp className="h-4 w-4" />} />
+        <ProfitStat label="Expenses" value={formatBDT(p.expensesTotal)} tint="bg-rose-50 text-rose-700" icon={<TrendingDown className="h-4 w-4" />} />
+      </div>
+
+      <div className={`mt-4 flex items-baseline justify-between gap-4 rounded-2xl p-4 ${positive ? "bg-emerald-50 border border-emerald-200" : "bg-rose-50 border border-rose-200"}`}>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Net profit</div>
+          <div className={`text-xl font-extrabold ${positive ? "text-emerald-700" : "text-rose-700"}`}>{formatBDT(p.netProfit)}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Margin</div>
+          <div className={`text-xl font-extrabold ${positive ? "text-emerald-700" : "text-rose-700"}`}>{p.margin.toFixed(2)}%</div>
+        </div>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-2 gap-1.5 text-xs">
+        <ProfitRow k="Units" v={p.units.toLocaleString()} />
+        <ProfitRow k="Shipping collected" v={formatBDT(p.shippingCollected)} />
+        <ProfitRow k="Discount" v={formatBDT(p.discount)} />
+        <ProfitRow k="Admin discount" v={formatBDT(p.adminDiscount)} />
+      </dl>
+
+      {expenseEntries.length > 0 && (
+        <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Expenses by type</div>
+          <ul className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
+            {expenseEntries.map(([type, amount]) => (
+              <li key={type} className="rounded-lg bg-white px-2 py-1">
+                <span className="font-semibold text-slate-600">{EXPENSE_TYPE_LABELS[type]}</span>{" "}
+                <span className="font-extrabold text-slate-900">{formatBDT(amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {p.note && (
+        <p className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs font-semibold text-amber-800">{p.note}</p>
+      )}
+    </section>
+  );
+}
+
+function ProfitStat({ label, value, tint, icon }: { label: string; value: string; tint: string; icon: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">{label}</span>
+        <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${tint}`}>{icon}</span>
+      </div>
+      <div className="mt-1 text-base font-extrabold text-slate-900">{value}</div>
+    </div>
+  );
+}
+
+function ProfitRow({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-1.5">
+      <dt className="text-slate-500">{k}</dt>
+      <dd className="font-bold text-slate-800">{v}</dd>
+    </div>
+  );
+}

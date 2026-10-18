@@ -563,3 +563,14 @@ body {
     animation: none;
   }
 }
+
+/* Global cursor + subtle dim while a route is navigating. The TopProgressBar component
+ * sets data-navigating="true" on <html>; this applies the wait cursor so clicks feel registered
+ * even before the next page HTML arrives. */
+html[data-navigating="true"] {
+  cursor: progress;
+}
+html[data-navigating="true"] a,
+html[data-navigating="true"] button {
+  cursor: progress;
+}

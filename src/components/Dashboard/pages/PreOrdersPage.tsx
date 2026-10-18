@@ -10,6 +10,7 @@ import {
   Boxes,
   Bike,
   Package,
+  PackageX,
   Plus,
   Pencil,
   Trash,
@@ -199,9 +200,10 @@ function PreOrderProductsSection() {
   const canUpdate = hasPermission("products.update");
   const canDelete = hasPermission("products.delete");
 
-  // Fetch products with search and category
+  // Fetch products with search and category. isPreOrder=true limits the backend result to pre-order
+  // products (both manually-marked AND stock-out auto-flipped ones) so pagination doesn't drop them.
   const products = useApiQuery<Product[]>(
-    `/products${qs({ page, limit: 20, search: q, category, status: canUpdate ? status : "" })}`
+    `/products${qs({ page, limit: 20, search: q, category, status: canUpdate ? status : "", isPreOrder: "true" })}`
   );
   const categories = useApiQuery<Category[]>(hasPermission("categories.view") ? "/categories" : null);
   const reset = <T,>(fn: (v: T) => void) => (v: T) => {
@@ -294,9 +296,17 @@ function PreOrderProductsSection() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <ProductThumb src={p.thumbnail} alt={p.productTitle} />
-                        <div className="flex min-w-0 flex-col">
+                        <div className="flex min-w-0 flex-col gap-1">
                           <span className="line-clamp-1 text-sm font-bold text-slate-900">{p.productTitle}</span>
                           <span className="font-mono text-slate-400">{p.slug}</span>
+                          {p.stock === 0 && (
+                            <span
+                              className="inline-flex w-fit items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-extrabold text-rose-700 uppercase"
+                              title="Stock is 0 — this product is auto-flipped to pre-order so customers can still order it."
+                            >
+                              <PackageX className="h-3 w-3" /> Stock-Out · Auto Pre-Order
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
