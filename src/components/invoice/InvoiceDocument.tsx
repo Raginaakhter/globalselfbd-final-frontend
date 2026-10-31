@@ -75,8 +75,14 @@ export default function InvoiceDocument({ invoice: inv, className = "" }: { invo
         </div>
         <div>
           <h2 className="mb-2 text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Ship to</h2>
-          <p className="text-sm text-slate-700">{inv.shippingAddress}</p>
-          <p className="text-sm text-slate-600">{[inv.shippingArea, inv.shippingCity].filter(Boolean).join(", ")}</p>
+          {inv.shippingAddress.trim() ? (
+            <>
+              <p className="text-sm text-slate-700">{inv.shippingAddress}</p>
+              <p className="text-sm text-slate-600">{[inv.shippingArea, inv.shippingCity].filter(Boolean).join(", ")}</p>
+            </>
+          ) : (
+            <p className="text-sm font-semibold text-slate-700">Store Pickup</p>
+          )}
           <p className="mt-2 text-xs text-slate-500">
             Payment: <span className="font-semibold text-slate-700">{PAYMENT_METHOD_LABELS[inv.paymentMethod] ?? inv.paymentMethod}</span>
             {inv.paidAt && <> · Paid {formatDate(inv.paidAt)}</>}

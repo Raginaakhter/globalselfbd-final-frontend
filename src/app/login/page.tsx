@@ -39,8 +39,6 @@ function LoginForm() {
   const [sentTo, setSentTo] = useState("");
   const [sentChannel, setSentChannel] = useState<"sms" | "email" | string>("email");
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
-  // Development only: filled in from `data.devOnly.otp` in the request-otp response so devs don't need SMS access.
-  const [devOtp, setDevOtp] = useState<string>("");
   const [resendLoading, setResendLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
@@ -100,9 +98,8 @@ function LoginForm() {
       setSentTo(value);
       setSentChannel(result.channel || (value.includes("@") ? "email" : "sms"));
       setCooldown(result.resendAfterSeconds ?? 60);
-      setDevOtp(result.devOtp ?? "");
       setStep("otp");
-      setOtp(result.devOtp && /^\d{6}$/.test(result.devOtp) ? result.devOtp.split("") : ["", "", "", "", "", ""]);
+      setOtp(["", "", "", "", "", ""]);
       queueMicrotask(() => inputRefs[0].current?.focus());
     }
   };
@@ -147,8 +144,7 @@ function LoginForm() {
     setResendLoading(false);
     if (result) {
       setCooldown(result.resendAfterSeconds ?? 60);
-      setDevOtp(result.devOtp ?? "");
-      setOtp(result.devOtp && /^\d{6}$/.test(result.devOtp) ? result.devOtp.split("") : ["", "", "", "", "", ""]);
+      setOtp(["", "", "", "", "", ""]);
       inputRefs[0].current?.focus();
     }
   };
@@ -254,14 +250,6 @@ function LoginForm() {
 
         {mode === "otp" && step === "otp" && (
           <form onSubmit={handleVerify} className="space-y-6">
-            {devOtp && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-                <div className="font-bold uppercase tracking-wider">Dev-only preview</div>
-                <div className="mt-1">
-                  Backend returned OTP <span className="font-mono text-sm font-black tracking-widest">{devOtp}</span> (production hides this).
-                </div>
-              </div>
-            )}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider text-center mb-3">
                 6-Digit Verification Code

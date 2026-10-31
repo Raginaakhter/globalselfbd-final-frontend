@@ -36,35 +36,48 @@ export default function PaymentsSummary() {
         </select>
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {cards.map(({ title, value, split, sub, icon: Icon, tone }) => (
-          <div key={title} className="rounded-2xl border border-slate-100 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold tracking-wider text-slate-500 uppercase">{title}</span>
-              <span className={`rounded-xl p-2 ${tone}`}>
-                <Icon className="h-4 w-4" />
-              </span>
+        {cards.map(({ title, value, split, sub, icon: Icon, tone }) => {
+          // Business's actual product revenue (after coupon/offer/admin discounts): total received minus the shipping
+          // handed to the courier. productAmount from the backend is the pre-discount subtotal, so the gap between
+          // them is the total discount customers got.
+          const netProduct = split && value != null ? value - split.shippingCost : null;
+          const discount = split && netProduct != null ? Math.max(0, split.productAmount - netProduct) : 0;
+          return (
+            <div key={title} className="rounded-2xl border border-slate-100 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold tracking-wider text-slate-500 uppercase">{title}</span>
+                <span className={`rounded-xl p-2 ${tone}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+              </div>
+              {/* The big number is product revenue AFTER discount (the company's actual take); shipping goes to the courier. */}
+              <div className="mt-2 text-2xl font-black text-slate-900">
+                {title === "Refunded"
+                  ? split ? formatBDT(split.productAmount) : "…"
+                  : netProduct != null ? formatBDT(netProduct) : "…"}
+              </div>
+              <div className="text-[11px] text-slate-400">Product price · {sub}</div>
+              {title !== "Refunded" && discount > 0 && (
+                <div className="text-[11px] font-semibold text-emerald-600">− {formatBDT(discount)} discount given</div>
+              )}
+              {split && title === "Refunded" && (
+                <p className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500">Product price only. Delivery charge is not refunded.</p>
+              )}
+              {split && title !== "Refunded" && (
+                <dl className="mt-3 space-y-1 border-t border-slate-100 pt-2 text-xs">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-slate-500">Shipping (to shipping co.)</dt>
+                    <dd className="font-bold text-amber-700">{formatBDT(split.shippingCost)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-slate-400">Total with shipping</dt>
+                    <dd className="font-semibold text-slate-500">{value == null ? "…" : formatBDT(value)}</dd>
+                  </div>
+                </dl>
+              )}
             </div>
-            {/* The big number is the product price (the company's money); shipping is handed to the shipping company */}
-            <div className="mt-2 text-2xl font-black text-slate-900">{split ? formatBDT(split.productAmount) : "…"}</div>
-            <div className="text-[11px] text-slate-400">Product price · {sub}</div>
-            {split && title === "Refunded" && (
-              // Refunds give back only the product price; the delivery charge stays with the shipping company
-              <p className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500">Product price only. Delivery charge is not refunded.</p>
-            )}
-            {split && title !== "Refunded" && (
-              <dl className="mt-3 space-y-1 border-t border-slate-100 pt-2 text-xs">
-                <div className="flex justify-between gap-2">
-                  <dt className="text-slate-500">Shipping (to shipping co.)</dt>
-                  <dd className="font-bold text-amber-700">{formatBDT(split.shippingCost)}</dd>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <dt className="text-slate-400">Total with shipping</dt>
-                  <dd className="font-semibold text-slate-500">{value == null ? "…" : formatBDT(value)}</dd>
-                </div>
-              </dl>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
       {!!data?.outstanding.byPaymentMethod.length && (
         <div className="flex flex-wrap gap-2 text-xs text-slate-600">

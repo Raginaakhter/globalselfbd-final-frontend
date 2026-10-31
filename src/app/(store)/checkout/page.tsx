@@ -21,7 +21,7 @@ type Errors = Partial<Record<keyof Form, string>>;
 const BD_PHONE = /^(?:\+?88)?01[3-9]\d{8}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validate(f: Form, zone: Zone): Errors {
+function validate(f: Form, zone: Zone, fulfillment: FulfillmentMethod): Errors {
   const e: Errors = {};
   if (f.name.trim().length < 2) e.name = "Please enter your full name.";
   if (!BD_PHONE.test(f.phone.replace(/[\s-]/g, ""))) e.phone = "Enter a valid Bangladeshi mobile number (e.g. 01712345678).";
@@ -31,9 +31,12 @@ function validate(f: Form, zone: Zone): Errors {
   } else if (!EMAIL.test(f.email)) {
     e.email = "Enter a valid email address.";
   }
-  if (f.address.trim().length < 5) e.address = "Please enter your full delivery address.";
-  if (zone === "outside" && f.city.trim().length < 2) e.city = "Please enter your city / district.";
-  if (f.area.trim().length < 2) e.area = "Please enter your area.";
+  // Store pickup skips the delivery-address block — the customer collects from our store.
+  if (fulfillment === "DELIVERY") {
+    if (f.address.trim().length < 5) e.address = "Please enter your full delivery address.";
+    if (zone === "outside" && f.city.trim().length < 2) e.city = "Please enter your city / district.";
+    if (f.area.trim().length < 2) e.area = "Please enter your area.";
+  }
   return e;
 }
 
@@ -100,13 +103,15 @@ export default function CheckoutPage() {
     }
     let cancelled = false;
     const id = setTimeout(() => {
+      const isPickup = fulfillmentMethod === "STORE_PICKUP";
       const body = {
         customerName: form.name.trim() || user?.name || "",
         phoneNumber: form.phone.replace(/[\s-]/g, "") || "01700000000",
         email: form.email.trim() || undefined,
-        shippingAddress: form.address.trim() || "pending",
-        city: zone === "dhaka" ? "Dhaka" : (form.city.trim() || "Dhaka"),
-        area: form.area.trim() || "pending",
+        // Backend parseShippingInfo makes these optional for STORE_PICKUP, so send empty strings there.
+        shippingAddress: isPickup ? "" : (form.address.trim() || "pending"),
+        city: isPickup ? "" : (zone === "dhaka" ? "Dhaka" : (form.city.trim() || "Dhaka")),
+        area: isPickup ? "" : (form.area.trim() || "pending"),
         paymentMethod: "CASH_ON_DELIVERY" as const,
         fulfillmentMethod,
         couponCode: coupon?.code,
@@ -175,11 +180,16 @@ export default function CheckoutPage() {
     );
   }
 
-  // Prefer the backend-calculated shipping. Fall back to the local-rate estimate while the first preview is in flight.
+  // Backend formula (adminOrderController + reportController): totalAmount = subtotal − discount − adminDiscount + shipping,
+  // where preview.subtotal is already the sum of OFFER prices (per-product discounts baked in). The preview is the
+  // single source of truth once it has arrived; local values are only a fallback while the first request is in flight.
   const rate = zone === "dhaka" ? settings.shippingInsideDhaka : settings.shippingOutsideDhaka;
   const shipping = preview ? preview.shippingCost : fulfillmentMethod === "STORE_PICKUP" ? 0 : rate;
   const adminDiscountAmount = preview?.adminDiscount?.amount ?? 0;
-  const totalAmount = preview?.totalAmount ?? Math.max(0, cart.subtotal - discount - adminDiscountAmount + shipping);
+  const summarySubtotal = preview?.subtotal ?? cart.subtotal;
+  // preview.discount is the coupon / auto-offer discount; admin discount is tracked separately.
+  const summaryDiscount = preview?.discount ?? discount;
+  const totalAmount = preview?.totalAmount ?? Math.max(0, summarySubtotal - summaryDiscount - adminDiscountAmount + shipping);
   const available = cart.lines.filter((l) => l.isAvailable);
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => {
@@ -193,7 +203,7 @@ export default function CheckoutPage() {
       toast.error("Remove the unavailable items from your cart first.");
       return;
     }
-    const found = validate(form, zone);
+    const found = validate(form, zone, fulfillmentMethod);
     setErrors(found);
     if (Object.keys(found).length > 0) {
       toast.error("Please fix the highlighted fields.");
@@ -201,13 +211,15 @@ export default function CheckoutPage() {
     }
 
     setPlacing(true);
+    const isPickup = fulfillmentMethod === "STORE_PICKUP";
     const payload = {
       customerName: form.name.trim(),
       phoneNumber: form.phone.replace(/[\s-]/g, ""),
       email: form.email.trim() || undefined,
-      shippingAddress: form.address.trim(),
-      city: zone === "dhaka" ? "Dhaka" : form.city.trim(),
-      area: form.area.trim(),
+      // Backend parseShippingInfo makes these optional for STORE_PICKUP, so send empty strings there.
+      shippingAddress: isPickup ? "" : form.address.trim(),
+      city: isPickup ? "" : (zone === "dhaka" ? "Dhaka" : form.city.trim()),
+      area: isPickup ? "" : form.area.trim(),
       orderNotes: form.note.trim() || undefined,
       paymentMethod: "CASH_ON_DELIVERY" as const,
       fulfillmentMethod,
@@ -339,48 +351,65 @@ export default function CheckoutPage() {
               <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center">
                 <MapPin className="w-4 h-4" />
               </span>
-              {fulfillmentMethod === "STORE_PICKUP" ? "Contact address" : "Delivery address"}
+              {fulfillmentMethod === "STORE_PICKUP" ? "Pickup location" : "Delivery address"}
             </h2>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {(
-                [
-                  { v: "dhaka", t: "Inside Dhaka", s: `${formatPrice(settings.shippingInsideDhaka)} · 1–3 days` },
-                  { v: "outside", t: "Outside Dhaka", s: `${formatPrice(settings.shippingOutsideDhaka)} · 3–5 days` },
-                ] as const
-              ).map((z) => (
-                <button
-                  key={z.v}
-                  type="button"
-                  onClick={() => setZone(z.v)}
-                  aria-pressed={zone === z.v}
-                  disabled={fulfillmentMethod === "STORE_PICKUP"}
-                  className={`text-left rounded-2xl border-2 p-4 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${zone === z.v ? "border-brand-600 bg-brand-50" : "border-slate-200 hover:border-brand-300"}`}
-                >
-                  <span className="block text-sm font-black text-navy-700">{z.t}</span>
-                  <span className="block text-xs text-slate-500 mt-0.5">{z.s}</span>
-                </button>
-              ))}
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <Field label="Full address" error={errors.address}>
-                  <textarea rows={3} maxLength={300} value={form.address} onChange={(e) => set("address", e.target.value)} autoComplete="street-address" placeholder="House, road, block, landmark…" className={inputCls(errors.address)} />
-                </Field>
-              </div>
-              {zone === "outside" && (
-                <Field label="City / District" error={errors.city}>
-                  <input value={form.city} maxLength={60} onChange={(e) => set("city", e.target.value)} placeholder="e.g. Chattogram" className={inputCls(errors.city)} />
-                </Field>
-              )}
-              <Field label="Area" error={errors.area}>
-                <input value={form.area} maxLength={60} onChange={(e) => set("area", e.target.value)} placeholder={zone === "dhaka" ? "e.g. Dhanmondi" : "e.g. Agrabad"} className={inputCls(errors.area)} />
-              </Field>
-              <div className={zone === "outside" ? "sm:col-span-2" : ""}>
+            {fulfillmentMethod === "STORE_PICKUP" ? (
+              <div className="space-y-4">
+                <div className="rounded-2xl border-2 border-brand-200 bg-brand-50 p-4 flex items-start gap-3">
+                  <Store className="w-5 h-5 mt-0.5 text-brand-700 flex-shrink-0" />
+                  <div className="text-sm text-navy-700">
+                    <p className="font-black">Pick up from our store</p>
+                    {settings.address && <p className="mt-1 text-slate-700">{settings.address}</p>}
+                    <p className="mt-1 text-xs text-slate-500">We&apos;ll call you on the number above when your order is ready.</p>
+                  </div>
+                </div>
                 <Field label="Order note" optional>
-                  <input value={form.note} maxLength={500} onChange={(e) => set("note", e.target.value)} placeholder="Delivery instructions" className={inputCls()} />
+                  <input value={form.note} maxLength={500} onChange={(e) => set("note", e.target.value)} placeholder="Any note for us" className={inputCls()} />
                 </Field>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {(
+                    [
+                      { v: "dhaka", t: "Inside Dhaka", s: `${formatPrice(settings.shippingInsideDhaka)} · 1–3 days` },
+                      { v: "outside", t: "Outside Dhaka", s: `${formatPrice(settings.shippingOutsideDhaka)} · 3–5 days` },
+                    ] as const
+                  ).map((z) => (
+                    <button
+                      key={z.v}
+                      type="button"
+                      onClick={() => setZone(z.v)}
+                      aria-pressed={zone === z.v}
+                      className={`text-left rounded-2xl border-2 p-4 transition-all cursor-pointer ${zone === z.v ? "border-brand-600 bg-brand-50" : "border-slate-200 hover:border-brand-300"}`}
+                    >
+                      <span className="block text-sm font-black text-navy-700">{z.t}</span>
+                      <span className="block text-xs text-slate-500 mt-0.5">{z.s}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <Field label="Full address" error={errors.address}>
+                      <textarea rows={3} maxLength={300} value={form.address} onChange={(e) => set("address", e.target.value)} autoComplete="street-address" placeholder="House, road, block, landmark…" className={inputCls(errors.address)} />
+                    </Field>
+                  </div>
+                  {zone === "outside" && (
+                    <Field label="City / District" error={errors.city}>
+                      <input value={form.city} maxLength={60} onChange={(e) => set("city", e.target.value)} placeholder="e.g. Chattogram" className={inputCls(errors.city)} />
+                    </Field>
+                  )}
+                  <Field label="Area" error={errors.area}>
+                    <input value={form.area} maxLength={60} onChange={(e) => set("area", e.target.value)} placeholder={zone === "dhaka" ? "e.g. Dhanmondi" : "e.g. Agrabad"} className={inputCls(errors.area)} />
+                  </Field>
+                  <div className={zone === "outside" ? "sm:col-span-2" : ""}>
+                    <Field label="Order note" optional>
+                      <input value={form.note} maxLength={500} onChange={(e) => set("note", e.target.value)} placeholder="Delivery instructions" className={inputCls()} />
+                    </Field>
+                  </div>
+                </div>
+              </>
+            )}
           </section>
 
           <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-5 sm:p-7">
@@ -456,10 +485,29 @@ export default function CheckoutPage() {
 
         <div className="lg:sticky lg:top-40">
           <OrderSummary
-            lines={available.map((l) => ({ key: l.key, title: l.title, thumbnail: l.thumbnail, quantity: l.quantity, subtotal: l.subtotal, size: l.size, slug: l.slug }))}
-            subtotal={cart.subtotal}
+            lines={available.map((l) => {
+              // When the preview has arrived, use its per-line offer price so the item list matches the Subtotal row.
+              // The cart endpoint returns RRP-based unit prices; the preview applies product-level offer discounts.
+              const previewItem = preview?.items.find((p) => (l.type === "combo" ? p.comboId === l.comboId : p.productId === l.productId && !p.comboId));
+              const offerUnit = previewItem?.unitPrice ?? l.unitPrice;
+              const offerSubtotal = previewItem?.subtotal ?? l.subtotal;
+              const rrpUnit = l.unitPrice;
+              return {
+                key: l.key,
+                title: l.title,
+                thumbnail: l.thumbnail,
+                quantity: l.quantity,
+                subtotal: offerSubtotal,
+                size: l.size,
+                slug: l.slug,
+                unitPrice: offerUnit,
+                // Strike through the RRP only when the preview actually gave us a lower offer price.
+                originalUnitPrice: rrpUnit > offerUnit ? rrpUnit : l.originalUnitPrice,
+              };
+            })}
+            subtotal={summarySubtotal}
             shipping={shipping}
-            discount={discount}
+            discount={summaryDiscount}
             adminDiscount={adminDiscountAmount}
             fulfillmentLabel={fulfillmentMethod === "STORE_PICKUP" ? "Store Pickup" : undefined}
             total={totalAmount}

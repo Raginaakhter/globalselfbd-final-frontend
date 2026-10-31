@@ -5,6 +5,7 @@ import ProductCard from "@/components/landing/ProductCard";
 import StoreSearchBar from "@/components/shop/StoreSearchBar";
 import { fetchOffers, fetchProducts } from "@/lib/server/storefront";
 import type { Offer } from "@/lib/backend-types";
+import type { StoreProduct } from "@/lib/storefront";
 import { formatPrice } from "@/lib/shop";
 
 const offerDiscount = (o: Offer) => (o.discountType === "PERCENTAGE" ? `${o.discountValue}% OFF` : `${formatPrice(o.discountValue)} OFF`);
@@ -16,8 +17,22 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE = 24;
-const POOL_SIZE = 240;
+const POOL_PAGE = 200;
+const MAX_POOL_PAGES = 10;
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+async function fetchAllProducts(search: string) {
+  const firstPage = await fetchProducts({ sort: "newest", limit: POOL_PAGE, page: 1, search });
+  if (firstPage.error) return { products: firstPage.products, error: firstPage.error };
+  const totalPages = Math.min(firstPage.pagination?.totalPages ?? 1, MAX_POOL_PAGES);
+  if (totalPages <= 1) return { products: firstPage.products, error: undefined as string | undefined };
+  const rest = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, i) => fetchProducts({ sort: "newest", limit: POOL_PAGE, page: i + 2, search })),
+  );
+  const products: StoreProduct[] = firstPage.products.slice();
+  for (const r of rest) products.push(...r.products);
+  return { products, error: undefined as string | undefined };
+}
 
 export default async function OfferPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
@@ -25,7 +40,7 @@ export default async function OfferPage({ searchParams }: { searchParams: Promis
   const page = Math.max(parseInt(first(sp.page), 10) || 1, 1);
 
   const [{ products, error }, { offers }] = await Promise.all([
-    fetchProducts({ sort: "newest", limit: POOL_SIZE, search: q }),
+    fetchAllProducts(q),
     fetchOffers({ limit: 12 }),
   ]);
 

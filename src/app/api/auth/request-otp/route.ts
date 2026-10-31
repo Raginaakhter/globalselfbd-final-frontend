@@ -3,8 +3,8 @@ import { callBackend, jsonPost } from "@/lib/server/backend";
 import { forwardedFor, readJson } from "../_shared";
 
 // Passwordless OTP request. Backend detects whether identifier is an email or BD phone and
-// sends the 6-digit code via Resend / Zend SMS respectively. In production the OTP is never
-// in the response — in dev the backend may include data.devOnly.otp, which we pass through.
+// sends the 6-digit code via Resend / Zend SMS respectively. The OTP is never in the response;
+// the user types what they receive by email / SMS.
 // Body is exactly { identifier }; fullName belongs to /verify-otp (used on register).
 export async function POST(req: NextRequest) {
   const { identifier } = await readJson(req);

@@ -15,11 +15,21 @@ export interface BackendResult<T = unknown> {
 // 25s cap — longer than Zend SMS's slowest realistic response, shorter than browser idle timeouts.
 const BACKEND_TIMEOUT_MS = 25_000;
 
-export async function callBackend<T = unknown>(path: string, init: RequestInit = {}): Promise<BackendResult<T>> {
+export interface CallBackendOptions {
+  /** Seconds to cache a GET response in Next.js's data cache. Omit for live (no-store) behavior. */
+  revalidate?: number;
+  tags?: string[];
+}
+
+export async function callBackend<T = unknown>(path: string, init: RequestInit = {}, opts: CallBackendOptions = {}): Promise<BackendResult<T>> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
   try {
-    const res = await fetch(`${BACKEND_URL}${path}`, { ...init, cache: "no-store", signal: controller.signal });
+    const cacheOpts: RequestInit =
+      opts.revalidate !== undefined
+        ? ({ next: { revalidate: opts.revalidate, ...(opts.tags ? { tags: opts.tags } : {}) } } as RequestInit)
+        : { cache: "no-store" };
+    const res = await fetch(`${BACKEND_URL}${path}`, { ...init, ...cacheOpts, signal: controller.signal });
     const text = await res.text();
     let body: BackendResult<T>["body"];
     try {

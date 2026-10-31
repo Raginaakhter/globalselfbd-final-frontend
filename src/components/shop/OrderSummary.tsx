@@ -9,6 +9,9 @@ export type SummaryLine = {
   thumbnail: string;
   quantity: number;
   subtotal: number;
+  /** Pre-discount per-unit price, when known. Shows a struck-through RRP and a "save" tag on the line. */
+  originalUnitPrice?: number;
+  unitPrice?: number;
   size?: string | null;
   slug?: string;
   type?: "product" | "combo";
@@ -38,19 +41,35 @@ export default function OrderSummary({ lines, subtotal, shipping, discount = 0, 
 
       {showItems && (
         <ul className="space-y-3 max-h-72 overflow-y-auto pr-1 mb-4">
-          {lines.map((l) => (
-            <li key={l.key} className="flex items-center gap-3">
-              <Link href={l.slug ? `/${l.type === "combo" ? "combo" : "product"}/${l.slug}` : "#"} className="relative w-14 h-14 shrink-0 rounded-xl bg-slate-50 flex items-center justify-center">
-                <ProductImage image={l.thumbnail} alt={l.title} className="rounded-xl" />
-                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-navy-700 text-white text-[11px] font-bold flex items-center justify-center">{l.quantity}</span>
-              </Link>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-navy-700 line-clamp-1">{l.title}</p>
-                {l.size && <p className="text-xs text-slate-500">Size {l.size}</p>}
-              </div>
-              <p className="text-sm font-black text-navy-700">{formatPrice(l.subtotal)}</p>
-            </li>
-          ))}
+          {lines.map((l) => {
+            const unit = l.unitPrice ?? l.subtotal / Math.max(l.quantity, 1);
+            const hasDiscount = l.originalUnitPrice && l.originalUnitPrice > unit;
+            const lineSavings = hasDiscount ? (l.originalUnitPrice! - unit) * l.quantity : 0;
+            const rrpSubtotal = hasDiscount ? l.originalUnitPrice! * l.quantity : 0;
+            return (
+              <li key={l.key} className="flex items-center gap-3">
+                <Link href={l.slug ? `/${l.type === "combo" ? "combo" : "product"}/${l.slug}` : "#"} className="relative w-14 h-14 shrink-0 rounded-xl bg-slate-50 flex items-center justify-center">
+                  <ProductImage image={l.thumbnail} alt={l.title} className="rounded-xl" />
+                  <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-navy-700 text-white text-[11px] font-bold flex items-center justify-center">{l.quantity}</span>
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-navy-700 line-clamp-1">{l.title}</p>
+                  {l.size && <p className="text-xs text-slate-500">Size {l.size}</p>}
+                  {hasDiscount && (
+                    <p className="text-[11px] font-bold text-emerald-600 mt-0.5">
+                      You save {formatPrice(lineSavings)}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  {hasDiscount && (
+                    <p className="text-[11px] text-slate-400 line-through">{formatPrice(rrpSubtotal)}</p>
+                  )}
+                  <p className="text-sm font-black text-navy-700">{formatPrice(l.subtotal)}</p>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -61,7 +80,7 @@ export default function OrderSummary({ lines, subtotal, shipping, discount = 0, 
         </div>
         {discount > 0 && (
           <div className="flex justify-between">
-            <dt className="text-slate-600">Discount</dt>
+            <dt className="text-slate-600">Coupon / Offer discount</dt>
             <dd className="font-bold text-brand-700">− {formatPrice(discount)}</dd>
           </div>
         )}

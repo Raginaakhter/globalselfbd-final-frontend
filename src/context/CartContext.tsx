@@ -28,6 +28,8 @@ export type CartLine = {
   title: string;
   thumbnail: string;
   unitPrice: number;
+  /** Pre-discount per-unit price (customerSellPrice) when known, so the UI can show the per-line savings. */
+  originalUnitPrice?: number;
   quantity: number;
   size: string | null;
   unit: string | null;
@@ -95,6 +97,8 @@ const fromServer = (cart: Cart | null | undefined): CartLine[] =>
       title: (isCombo ? i.comboSnapshot?.comboTitle : i.productSnapshot?.productTitle) ?? (isCombo ? "Combo" : "Product"),
       thumbnail: (isCombo ? i.comboSnapshot?.thumbnail : i.productSnapshot?.thumbnail) ?? "",
       unitPrice: i.unitPrice,
+      // customerSellPrice is RRP (pre-discount); unitPrice is finalPrice. Only expose when the two differ.
+      originalUnitPrice: !isCombo && i.productSnapshot && i.productSnapshot.customerSellPrice > i.unitPrice ? i.productSnapshot.customerSellPrice : undefined,
       quantity: i.quantity,
       size: i.selectedSize,
       unit: i.selectedUnit,
@@ -258,6 +262,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               title: product.productTitle,
               thumbnail: product.thumbnail,
               unitPrice: product.finalPrice,
+              originalUnitPrice: product.customerSellPrice > product.finalPrice ? product.customerSellPrice : undefined,
               quantity: Math.min(qty, MAX_QTY),
               size,
               unit: product.unit,

@@ -5,8 +5,13 @@ import type { Pagination, StoreCategory, StoreProduct } from "@/lib/storefront";
 import { EMPTY_FOOTER, type Banner, type Brand, type Combo, type FooterSettings, type HomepageReview, type Offer, type PreOrderSource, type ShippingSettings } from "@/lib/backend-types";
 import { callBackend } from "./backend";
 
+// Short TTLs so the storefront's data cache absorbs repeat page views without staleness.
+// The quasi-static layout data (categories, brands, banners, footer, shipping) is refreshed less often than product lists.
+const TTL_CATALOG = 60;
+const TTL_STATIC = 300;
+
 export async function fetchCategoryTree(): Promise<StoreCategory[]> {
-  const { body } = await callBackend<StoreCategory[]>("/api/public/categories");
+  const { body } = await callBackend<StoreCategory[]>("/api/public/categories", {}, { revalidate: TTL_STATIC });
   return body.success && Array.isArray(body.data) ? body.data : [];
 }
 
@@ -27,31 +32,31 @@ export interface ProductQuery {
 export async function fetchProducts(query: ProductQuery = {}): Promise<{ products: StoreProduct[]; pagination: Pagination | null; error?: string }> {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== "" && v !== null) params.set(k, String(v));
-  const { body } = await callBackend<StoreProduct[]>(`/api/public/products${params.size ? `?${params}` : ""}`);
+  const { body } = await callBackend<StoreProduct[]>(`/api/public/products${params.size ? `?${params}` : ""}`, {}, { revalidate: TTL_CATALOG });
   if (!body.success) return { products: [], pagination: null, error: body.message };
   return { products: body.data ?? [], pagination: (body.pagination as Pagination | undefined) ?? null };
 }
 
 /** Product by slug, or null when it doesn't exist / isn't visible to customers. */
 export async function fetchProduct(slug: string): Promise<StoreProduct | null> {
-  const { body } = await callBackend<StoreProduct>(`/api/public/products/${encodeURIComponent(slug)}`);
+  const { body } = await callBackend<StoreProduct>(`/api/public/products/${encodeURIComponent(slug)}`, {}, { revalidate: TTL_CATALOG });
   return body.success && body.data ? body.data : null;
 }
 
 /** Active landing page banners, in display order. */
 export async function fetchBanners(): Promise<Banner[]> {
-  const { body } = await callBackend<Banner[]>("/api/public/banners");
+  const { body } = await callBackend<Banner[]>("/api/public/banners", {}, { revalidate: TTL_STATIC });
   return body.success && Array.isArray(body.data) ? body.data : [];
 }
 
 /** Active brands marked for the Shop Top Brands section. */
 export async function fetchFeaturedBrands(): Promise<Brand[]> {
-  const { body } = await callBackend<Brand[]>("/api/public/brands?featured=true");
+  const { body } = await callBackend<Brand[]>("/api/public/brands?featured=true", {}, { revalidate: TTL_STATIC });
   return body.success && Array.isArray(body.data) ? body.data : [];
 }
 
 export async function fetchFooter(): Promise<FooterSettings> {
-  const { body } = await callBackend<FooterSettings>("/api/public/footer");
+  const { body } = await callBackend<FooterSettings>("/api/public/footer", {}, { revalidate: TTL_STATIC });
   const data = body.success && body.data ? body.data : null;
   return {
     ...EMPTY_FOOTER,
@@ -64,13 +69,13 @@ export async function fetchFooter(): Promise<FooterSettings> {
 
 /** Current delivery charges (GET /api/public/shipping); null when the backend is unreachable. */
 export async function fetchShipping(): Promise<ShippingSettings | null> {
-  const { body } = await callBackend<ShippingSettings>("/api/public/shipping");
+  const { body } = await callBackend<ShippingSettings>("/api/public/shipping", {}, { revalidate: TTL_STATIC });
   return body.success && body.data ? body.data : null;
 }
 
 /** Approved reviews an admin picked for the homepage carousel. */
 export async function fetchHomepageReviews(limit = 12): Promise<HomepageReview[]> {
-  const { body } = await callBackend<HomepageReview[]>(`/api/reviews/homepage?limit=${limit}`);
+  const { body } = await callBackend<HomepageReview[]>(`/api/reviews/homepage?limit=${limit}`, {}, { revalidate: TTL_STATIC });
   return body.success && Array.isArray(body.data) ? body.data : [];
 }
 
@@ -84,12 +89,12 @@ const toQuery = (q: Record<string, string | number | undefined>) => {
 
 /** Live combos (ACTIVE + inside their time window). */
 export async function fetchCombos(query: { page?: number; limit?: number; search?: string } = {}): Promise<{ combos: Combo[]; pagination: Pagination | null; error?: string }> {
-  const { body } = await callBackend<Combo[]>(`/api/public/combos${toQuery(query)}`);
+  const { body } = await callBackend<Combo[]>(`/api/public/combos${toQuery(query)}`, {}, { revalidate: TTL_CATALOG });
   if (!body.success) return { combos: [], pagination: null, error: body.message };
   return { combos: Array.isArray(body.data) ? body.data : [], pagination: (body.pagination as Pagination | undefined) ?? null };
 }
 
-/** Single combo by slug (increments views on the backend); null when not live. Cached per request. */
+// The combo-by-slug endpoint increments views on the backend, so it stays live (no revalidate caching).
 export const fetchCombo = cache(async (slug: string): Promise<Combo | null> => {
   const { body } = await callBackend<Combo>(`/api/public/combos/${encodeURIComponent(slug)}`);
   return body.success && body.data ? body.data : null;
@@ -97,13 +102,13 @@ export const fetchCombo = cache(async (slug: string): Promise<Combo | null> => {
 
 /** Active offers whose window includes now. */
 export async function fetchOffers(query: { page?: number; limit?: number } = {}): Promise<{ offers: Offer[]; pagination: Pagination | null; error?: string }> {
-  const { body } = await callBackend<Offer[]>(`/api/public/offers${toQuery(query)}`);
+  const { body } = await callBackend<Offer[]>(`/api/public/offers${toQuery(query)}`, {}, { revalidate: TTL_CATALOG });
   if (!body.success) return { offers: [], pagination: null, error: body.message };
   return { offers: Array.isArray(body.data) ? body.data : [], pagination: (body.pagination as Pagination | undefined) ?? null };
 }
 
 /** Offer by slug with its in-scope products; null when not found / not live. Cached per request. */
 export const fetchOffer = cache(async (slug: string): Promise<(Omit<Offer, "products"> & { products: StoreProduct[] }) | null> => {
-  const { body } = await callBackend<Omit<Offer, "products"> & { products: StoreProduct[] }>(`/api/public/offers/${encodeURIComponent(slug)}`);
+  const { body } = await callBackend<Omit<Offer, "products"> & { products: StoreProduct[] }>(`/api/public/offers/${encodeURIComponent(slug)}`, {}, { revalidate: TTL_CATALOG });
   return body.success && body.data ? { ...body.data, products: body.data.products ?? [] } : null;
 });

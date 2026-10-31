@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarRange, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { CalendarRange, Percent, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import type { ExpenseType, PnlCustomRangeReport, PnlPeriod, PnlPeriodTotals, PnlReport, PnlRollingReport } from "@/lib/backend-types";
 import { EXPENSE_TYPE_LABELS, isPnlRolling } from "@/lib/backend-types";
 import { qs, useApiQuery } from "../api";
@@ -55,9 +55,8 @@ export default function PnlPage() {
               setMode(m);
               if (m === "rolling") setCustomApplied(false);
             }}
-            className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-bold transition ${
-              mode === m ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
-            }`}
+            className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-bold transition ${mode === m ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+              }`}
           >
             {label}
           </button>
@@ -139,27 +138,20 @@ function PeriodCard({ period }: { period: PnlPeriod }) {
 function TotalsPanel({ totals, compact = false }: { totals: PnlPeriodTotals; compact?: boolean }) {
   const expenseEntries = Object.entries(totals.expensesByType) as [ExpenseType, number][];
   const netIsPositive = totals.netProfit >= 0;
+  const profitTone = netIsPositive ? "text-emerald-700" : "text-rose-700";
+  const profitTint = netIsPositive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700";
   return (
     <div className={`mt-4 ${compact ? "" : "max-w-3xl"}`}>
       <div className={`grid gap-3 ${compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"}`}>
-        <Stat label="Revenue" value={formatBDT(totals.revenue)} tone="text-slate-900" icon={<Wallet className="h-4 w-4" />} tint="bg-blue-50 text-blue-700" />
+        <Stat label="Selling price" value={formatBDT(totals.revenue)} tone="text-slate-900" icon={<Wallet className="h-4 w-4" />} tint="bg-blue-50 text-blue-700" />
         <Stat label="COGS" value={formatBDT(totals.cogs)} tone="text-slate-900" icon={<TrendingDown className="h-4 w-4" />} tint="bg-amber-50 text-amber-700" />
-        <Stat label="Gross profit" value={formatBDT(totals.grossProfit)} tone="text-emerald-700" icon={<TrendingUp className="h-4 w-4" />} tint="bg-emerald-50 text-emerald-700" />
-        <Stat label="Expenses" value={formatBDT(totals.expensesTotal)} tone="text-rose-700" icon={<TrendingDown className="h-4 w-4" />} tint="bg-rose-50 text-rose-700" />
-      </div>
-
-      <div className={`mt-4 flex items-baseline justify-between gap-4 rounded-2xl p-4 ${netIsPositive ? "bg-emerald-50 border border-emerald-200" : "bg-rose-50 border border-rose-200"}`}>
-        <div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Net profit</div>
-          <div className={`text-2xl font-extrabold ${netIsPositive ? "text-emerald-700" : "text-rose-700"}`}>{formatBDT(totals.netProfit)}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Margin</div>
-          <div className={`text-2xl font-extrabold ${netIsPositive ? "text-emerald-700" : "text-rose-700"}`}>{totals.margin.toFixed(2)}%</div>
-        </div>
+        <Stat label="Margin" value={`${totals.margin.toFixed(2)}%`} tone={profitTone} icon={<Percent className="h-4 w-4" />} tint={profitTint} />
+        <Stat label="Profit" value={formatBDT(totals.netProfit)} tone={profitTone} icon={<TrendingUp className="h-4 w-4" />} tint={profitTint} />
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+        <Row k="Gross profit" v={formatBDT(totals.grossProfit)} />
+        <Row k="Expenses" v={formatBDT(totals.expensesTotal)} />
         <Row k="Orders" v={totals.orders.toLocaleString()} />
         <Row k="Shipping collected" v={formatBDT(totals.shippingCollected)} />
         <Row k="Discount" v={formatBDT(totals.discount)} />
@@ -182,7 +174,6 @@ function TotalsPanel({ totals, compact = false }: { totals: PnlPeriodTotals; com
     </div>
   );
 }
-
 function Stat({ label, value, tone, icon, tint }: { label: string; value: string; tone: string; icon: React.ReactNode; tint: string }) {
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white p-3">

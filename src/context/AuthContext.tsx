@@ -66,8 +66,6 @@ export interface RequestOtpResult {
   channel: "sms" | "email" | string;
   expiresInMinutes?: number;
   resendAfterSeconds?: number;
-  /** Present only in development: the actual 6-digit code the backend generated, so devs can copy without checking the SMS / email. */
-  devOtp?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -279,7 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json().catch(() => null);
       const payload = data?.data as
-        | { channel?: string; expiresInMinutes?: number; resendAfterSeconds?: number; devOnly?: { otp?: string } }
+        | { channel?: string; expiresInMinutes?: number; resendAfterSeconds?: number }
         | undefined;
       if (res.ok && data?.success) {
         toast.success(data.message || "Verification code sent.");
@@ -287,7 +285,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           channel: payload?.channel ?? (identifier.includes("@") ? "email" : "sms"),
           expiresInMinutes: payload?.expiresInMinutes,
           resendAfterSeconds: payload?.resendAfterSeconds,
-          devOtp: payload?.devOnly?.otp,
         };
       }
       toast.error(data?.message || "Failed to send verification code.");
