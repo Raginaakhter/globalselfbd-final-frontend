@@ -4,7 +4,8 @@ import { BACKEND_URL } from "@/lib/server/backend";
 // Same-origin proxy to the Express API: /api/v1/<path> -> BACKEND_URL/api/<path>.
 // The browser sends its access token as a Bearer header; this route never reads cookies,
 // so auth endpoints that rotate tokens stay behind /api/auth/*.
-const FORWARD_HEADERS = ["authorization", "content-type", "accept", "x-forwarded-for"];
+// user-agent + client IP headers let the backend derive device/browser/OS and location for analytics.
+const FORWARD_HEADERS = ["authorization", "content-type", "accept", "x-forwarded-for", "x-real-ip", "user-agent"];
 
 async function proxy(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
