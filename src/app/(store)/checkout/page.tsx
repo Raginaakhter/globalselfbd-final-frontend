@@ -13,6 +13,7 @@ import type { AdminDiscountType, CheckoutPreview, FulfillmentMethod, Order } fro
 import OrderSummary from "@/components/shop/OrderSummary";
 import CouponBox, { type AppliedCoupon } from "@/components/shop/CouponBox";
 import { PreOrderNotice } from "@/components/orders/StatusTimeline";
+import { trackEvent } from "@/lib/analytics-tracker";
 
 type Zone = "dhaka" | "outside";
 type Form = { name: string; phone: string; email: string; address: string; city: string; area: string; note: string };
@@ -74,6 +75,18 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [placing, setPlacing] = useState(false);
   const { settings } = useSite();
+
+  // Fire `checkout_start` once per checkout visit — the hook guard (empty cart) mirrors the render guard below.
+  useEffect(() => {
+    if (cart.hydrated && cart.lines.length > 0) {
+      void trackEvent({
+        eventName: "checkout_start",
+        metadata: { itemCount: cart.lines.length, subtotal: cart.subtotal },
+      });
+    }
+    // Run once when the cart first has items.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.hydrated]);
   // Coupon checked by the backend for this cart subtotal
   const [coupon, setCoupon] = useState<(AppliedCoupon & { subtotal: number }) | null>(null);
   const discount = coupon?.discount ?? 0;
@@ -230,10 +243,20 @@ export default function CheckoutPage() {
         : {}),
     };
 
+    // Client-side signal only — the server-side reconciler is authoritative for `purchase`.
+    void trackEvent({
+      eventName: "payment_initiated",
+      metadata: { paymentMethod: payload.paymentMethod, fulfillmentMethod, total: totalAmount },
+    });
+
     try {
       if (isAuthenticated) {
         // Signed-in: cart lives on the backend, order endpoint pulls from it.
         const res = await api<Order>("/orders", { method: "POST", body: JSON.stringify(payload) });
+        void trackEvent({
+          eventName: "payment_success",
+          metadata: { orderId: res.data._id, orderNumber: res.data.orderNumber, total: totalAmount },
+        });
         await cart.refresh();
         toast.success(res.message || "Order placed successfully!");
         router.replace(`/order-success/${res.data._id}`);
@@ -257,6 +280,10 @@ export default function CheckoutPage() {
       if (!guestRes.ok || !guestBody?.success || !guestBody.data) {
         throw new ApiError(guestBody?.message || `Request failed (${guestRes.status})`, guestRes.status);
       }
+      void trackEvent({
+        eventName: "payment_success",
+        metadata: { orderId: guestBody.data._id, orderNumber: guestBody.data.orderNumber, total: totalAmount, guest: true },
+      });
       await cart.clear();
       toast.success(guestBody.message || "Order placed successfully!");
       const phone = form.phone.replace(/[\s-]/g, "");
@@ -265,6 +292,14 @@ export default function CheckoutPage() {
       // Send them to the public track-order page prefilled with their order details instead.
       router.replace(`/track-order?orderNumber=${encodeURIComponent(num)}&phone=${encodeURIComponent(phone)}`);
     } catch (err) {
+      void trackEvent({
+        eventName: "payment_failed",
+        metadata: {
+          paymentMethod: payload.paymentMethod,
+          error: err instanceof ApiError ? err.message : err instanceof Error ? err.message : "unknown",
+          status: err instanceof ApiError ? err.status : undefined,
+        },
+      });
       toast.error(err instanceof ApiError ? err.message : "Failed to place order. Please try again.");
       if (err instanceof ApiError && err.status === 409) await cart.refresh();
       setPlacing(false);

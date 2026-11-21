@@ -4,6 +4,7 @@ export { default as Hero } from "./Hero";
 export { default as TrustBar } from "./TrustBar";
 export { default as CategoryGrid } from "./CategoryGrid";
 export { default as ProductSection } from "./ProductSection";
+export { default as RotatingProductSection } from "./RotatingProductSection";
 export { default as PromoBanner } from "./PromoBanner";
 export { default as BrandsMarquee } from "./BrandsMarquee";
 export { default as DeliveryPromise } from "./DeliveryPromise";

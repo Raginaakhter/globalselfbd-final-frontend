@@ -8,6 +8,8 @@ import { WishlistProvider } from "@/context/WishlistContext";
 import CartDrawer from "@/components/shop/CartDrawer";
 import WhatsAppWidget from "@/components/landing/WhatsAppWidget";
 import TopProgressBar from "@/components/landing/TopProgressBar";
+import StorefrontAnalytics from "@/components/analytics/StorefrontAnalytics";
+import { Suspense } from "react";
 import { Toaster } from "sonner";
 import { SiteProvider } from "@/context/SiteContext";
 import { fetchSite } from "@/lib/site-fetch";
@@ -84,6 +86,9 @@ export default async function RootLayout({
             <WishlistProvider>
               <CartProvider>
                 <TopProgressBar />
+                <Suspense fallback={null}>
+                  <StorefrontAnalytics />
+                </Suspense>
                 {children}
                 <CartDrawer />
                 <WhatsAppWidget />

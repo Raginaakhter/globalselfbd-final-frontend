@@ -3,6 +3,7 @@ import {
   Truck,
   TruckElectric,
   BadgeCheck,
+  BarChart3,
   Bell,
   Boxes,
   CalendarClock,
@@ -45,6 +46,7 @@ export type ModuleKey =
   | "invoices"
   | "expenses"
   | "pnl"
+  | "analytics"
   | "users"
   | "contact-messages"
   | "coupons"
@@ -87,6 +89,7 @@ export const MODULES: ModuleDef[] = [
   { key: "invoices", title: "Invoices", path: `${BASE}/invoices`, icon: FileText, section: "main", menuKey: "invoices", editAny: ["invoices.create"] },
   { key: "expenses", title: "Expenses", path: `${BASE}/expenses`, icon: Receipt, section: "main", viewAny: ["expenses.view"], editAny: ["expenses.create", "expenses.update", "expenses.delete"] },
   { key: "pnl", title: "Profit & Loss", path: `${BASE}/pnl`, icon: LineChart, section: "main", viewAny: ["reports.view"], editAny: [] },
+  { key: "analytics", title: "Analytics", path: `${BASE}/analytics`, icon: BarChart3, section: "main", viewAny: ["analytics.view"], editAny: ["analytics.export"] },
   { key: "users", title: "Users", path: `${BASE}/users`, icon: Users, section: "main", menuKey: "users", editAny: ["users.create", "users.update", "users.delete", "users.changeRole"] },
   { key: "contact-messages", title: "Contact Messages", path: `${BASE}/contact-messages`, icon: MessageSquare, section: "main", menuKey: "contactMessages", editAny: ["contactMessages.update", "contactMessages.delete"] },
   { key: "coupons", title: "Coupons", path: `${BASE}/coupons`, icon: Ticket, section: "main", menuKey: "coupons", editAny: ["coupons.create", "coupons.update", "coupons.delete"] },

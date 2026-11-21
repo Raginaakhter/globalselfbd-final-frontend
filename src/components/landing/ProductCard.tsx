@@ -10,6 +10,7 @@ import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import ProductImage from "@/components/shop/ProductImage";
 import Stars from "@/components/reviews/Stars";
+import { trackEvent } from "@/lib/analytics-tracker";
 
 export default function ProductCard({ product }: { product: StoreProduct }) {
   const router = useRouter();
@@ -20,6 +21,10 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
   const { _id: id, slug, productTitle: name, finalPrice: price, customerSellPrice: rrp, discountPercent, thumbnail, categoryId } = product;
   const liked = isWishlisted(id);
   const href = `/product/${slug}`;
+
+  const trackProductClick = () => {
+    void trackEvent({ eventName: "product_click", productId: id, metadata: { price, slug } });
+  };
   const detail = product.sizes.length ? `Sizes: ${product.sizes.join(", ")}` : packLabel(product);
   const outOfStock = product.availability === "OUT_OF_STOCK";
   // Products with sizes need a size picked on the product page first.
@@ -86,7 +91,7 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
             </div>
           )}
 
-          <Link href={href} className="relative w-full h-full flex items-center justify-center overflow-hidden">
+          <Link href={href} onClick={trackProductClick} className="relative w-full h-full flex items-center justify-center overflow-hidden">
             <ProductImage image={thumbnail} alt={name} className="transition-transform duration-500 group-hover:scale-110" />
           </Link>
         </div>
@@ -95,7 +100,7 @@ export default function ProductCard({ product }: { product: StoreProduct }) {
           {categoryId?.name && <p className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-400 mb-1">{categoryId.name}</p>}
 
           <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors mb-1.5 min-h-[2.4rem]">
-            <Link href={href}>{name}</Link>
+            <Link href={href} onClick={trackProductClick}>{name}</Link>
           </h3>
 
           {detail && <p className="text-[11px] sm:text-xs font-medium text-slate-500 mb-2 line-clamp-1">{detail}</p>}

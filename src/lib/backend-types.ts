@@ -1529,3 +1529,264 @@ export interface CourierBookingResponse {
   settlementStatus: CourierSettlementStatus;
   bookingFailureReason?: string;
 }
+
+/* ============================================================
+   Analytics (admin reports, GET /api/admin/analytics/*)
+   ============================================================ */
+
+export type AnalyticsPreset =
+  | "today"
+  | "yesterday"
+  | "last7d"
+  | "last30d"
+  | "last90d"
+  | "thisMonth"
+  | "lastMonth";
+
+export interface AnalyticsRange {
+  from: string;
+  to: string;
+}
+
+export interface AnalyticsOverview {
+  range: AnalyticsRange;
+  visitors: { total: number; unique: number; returning: number; active: number };
+  sessions: { total: number; avgDurationSeconds: number; bounceRate: number };
+  engagement: {
+    pageViews: number;
+    totalClicks: number;
+    productViews: number;
+    addToCart: number;
+    checkoutStarts: number;
+  };
+  sales: {
+    completedOrders: number;
+    totalRevenue: number;
+    conversionRate: number;
+    cartAbandonmentRate: number;
+  };
+}
+
+export type AnalyticsPagesSort = "views" | "unique" | "sessions" | "bounce" | "time";
+
+export interface AnalyticsPageRow {
+  pagePath: string;
+  pageTitle: string;
+  totalViews: number;
+  uniqueVisitors: number;
+  sessions: number;
+  entries: number;
+  exits: number;
+  bounceRate: number;
+  lastSeen: string;
+}
+
+export interface AnalyticsClickRow {
+  elementId: string;
+  elementName?: string;
+  buttonLabel: string;
+  pagePath: string;
+  productId?: string | null;
+  totalClicks: number;
+  uniqueVisitors: number;
+}
+
+export interface AnalyticsTopElement {
+  elementId: string;
+  buttonLabel: string;
+  totalClicks: number;
+  uniqueVisitors: number;
+}
+
+export interface AnalyticsProductRow {
+  productId: string;
+  productTitle: string;
+  slug: string;
+  thumbnail: string | null;
+  price: number;
+  views: number;
+  clicks: number;
+  addToCart: number;
+  wishlist: number;
+  uniqueVisitors: number;
+  purchases: number;
+  revenue: number;
+  conversionRate: number;
+}
+
+export interface AnalyticsProductDetail extends AnalyticsProductRow {
+  range: AnalyticsRange;
+  removeFromCart: number;
+}
+
+export type AnalyticsDeviceType = "mobile" | "desktop" | "tablet" | string;
+
+export interface AnalyticsVisitorRow {
+  visitorId: string;
+  firstVisit: string;
+  lastVisit: string;
+  totalSessions: number;
+  totalPageViews: number;
+  totalEvents: number;
+  firstTrafficSource: string | null;
+  firstUtmCampaign: string | null;
+  deviceType: AnalyticsDeviceType;
+  browser: string | null;
+  country: string | null;
+  city: string | null;
+  userId: string | null;
+}
+
+export interface AnalyticsActiveVisitors {
+  idleCutoff: string;
+  idleMinutes: number;
+  count: number;
+  sessions: {
+    sessionId: string;
+    visitorId: string;
+    currentPage: string;
+    deviceType: AnalyticsDeviceType;
+    country: string | null;
+    lastActivity: string;
+  }[];
+}
+
+export interface AnalyticsEvent {
+  _id?: string;
+  createdAt: string;
+  eventName: string;
+  eventCategory?: string;
+  pagePath?: string;
+  pageUrl?: string;
+  productId?: string | null;
+  elementId?: string | null;
+  buttonLabel?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AnalyticsSessionRow {
+  sessionId: string;
+  visitorId: string;
+  entryPage: string;
+  exitPage: string | null;
+  currentPage: string | null;
+  pageViews: number;
+  totalEvents: number;
+  sessionStart: string;
+  lastActivity: string;
+  sessionEnd: string | null;
+  duration: number;
+  deviceType: AnalyticsDeviceType;
+  trafficSource: string | null;
+  isActive: boolean;
+  isBounce: boolean;
+}
+
+export interface AnalyticsVisitorProfile {
+  visitor: AnalyticsVisitorRow;
+  sessions: AnalyticsSessionRow[];
+  recentEvents: AnalyticsEvent[];
+}
+
+export interface AnalyticsSessionDetail {
+  session: AnalyticsSessionRow;
+  events: AnalyticsEvent[];
+}
+
+export interface AnalyticsTrendDay {
+  day: string;
+  visitors: number;
+  sessions: number;
+  pageViews: number;
+  productViews: number;
+  addToCart: number;
+  checkoutStarts: number;
+  purchases: number;
+  revenue: number;
+  byDevice: Record<string, number>;
+  bySource: Record<string, number>;
+  byCountry: Record<string, number>;
+}
+
+export interface AnalyticsTrends {
+  range: AnalyticsRange;
+  days: AnalyticsTrendDay[];
+}
+
+export interface AnalyticsFunnelStage {
+  stage:
+    | "visitors"
+    | "productViewers"
+    | "addToCart"
+    | "cartVisitors"
+    | "checkoutStarted"
+    | "paymentInitiated"
+    | "purchased"
+    | string;
+  count: number;
+  dropOff: number;
+  conversionFromStart: number;
+}
+
+export interface AnalyticsFunnel {
+  range: AnalyticsRange;
+  stages: AnalyticsFunnelStage[];
+}
+
+export interface AnalyticsJourney {
+  path: string[];
+  sessions: number;
+}
+
+export interface AnalyticsSource {
+  source: string;
+  sessions: number;
+  uniqueVisitors: number;
+}
+
+export interface AnalyticsDevices {
+  byDevice: { deviceType: string; sessions: number; uniqueVisitors: number }[];
+  byBrowser: { browser: string; sessions: number }[];
+  byOs: { operatingSystem: string; sessions: number }[];
+}
+
+export interface AnalyticsLocation {
+  country: string;
+  city: string;
+  sessions: number;
+  uniqueVisitors: number;
+}
+
+export interface AnalyticsSearch {
+  query: string;
+  count: number;
+  noResultCount: number;
+  uniqueVisitors: number;
+}
+
+export interface AnalyticsCart {
+  added: number;
+  removed: number;
+  checkoutStart: number;
+  abandonmentRate: number;
+  topAddedProducts: { _id: string; additions: number }[];
+}
+
+export interface AnalyticsCheckout {
+  checkoutStart: number;
+  paymentInitiated: number;
+  paymentSuccessClient: number;
+  paymentFailed: number;
+  verifiedOrders: number;
+  paymentMethodMix: { paymentMethod: string; orders: number }[];
+}
+
+export interface AnalyticsCustomer {
+  userId: string;
+  totalEvents: number;
+  pageViews: number;
+  addToCart: number;
+  checkoutStart: number;
+  sessions: number;
+  lastSeen: string;
+}

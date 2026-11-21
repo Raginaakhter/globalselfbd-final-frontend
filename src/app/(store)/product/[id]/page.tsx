@@ -8,6 +8,7 @@ import PurchasePanel from "@/components/shop/PurchasePanel";
 import ProductGallery from "@/components/shop/ProductGallery";
 import ProductReviews from "@/components/reviews/ProductReviews";
 import Stars from "@/components/reviews/Stars";
+import ProductViewTracker from "@/components/analytics/ProductViewTracker";
 import { fetchProduct, fetchProducts } from "@/lib/server/storefront";
 import { packLabel } from "@/lib/storefront";
 import { formatPrice } from "@/lib/shop";
@@ -49,6 +50,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
   return (
     <>
+      <ProductViewTracker productId={product._id} price={product.finalPrice} category={category?.slug} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <nav aria-label="Breadcrumb" className="text-xs text-slate-500 mb-4 flex flex-wrap items-center gap-1.5">
           <Link href="/" className="hover:text-brand-700">Home</Link>

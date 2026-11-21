@@ -3,6 +3,7 @@ import {
   TrustBar,
   CategoryGrid,
   ProductSection,
+  RotatingProductSection,
   PromoBanner,
   BrandsMarquee,
   DeliveryPromise,
@@ -17,8 +18,10 @@ import { fetchCombos, fetchProducts } from "@/lib/server/storefront";
 export default async function Home() {
   // The public API has no "best sellers" data, so the home page shows the newest products and the discounted ones.
   // Pre-order list includes manually-marked AND auto-flipped stock-out products (backend sets isPreOrder=true for both).
+  // New Arrivals picks a random 20-product slice on every reload. 100 is the backend's max page size, so
+  // the pool holds every newest-sorted product available today — enough for the current catalogue.
   const [newest, recentPool, combos, preOrder] = await Promise.all([
-    fetchProducts({ sort: "newest", limit: 16 }),
+    fetchProducts({ sort: "newest", limit: 100 }),
     fetchProducts({ sort: "newest", limit: 80 }),
     fetchCombos({ limit: 4 }),
     fetchProducts({ isPreOrder: true, sort: "newest", limit: 12 }),
@@ -31,7 +34,14 @@ export default async function Home() {
       <Reveal variant="fade"><TrustBar /></Reveal>
       <Reveal variant="up"><CategoryGrid /></Reveal>
       <Reveal variant="up">
-        <ProductSection id="new-arrivals" title="New Arrivals" bn="নতুন এসেছে" products={newest.products} href="/shop?sort=newest" />
+        <RotatingProductSection
+          id="new-arrivals"
+          title="New Arrivals"
+          bn="নতুন এসেছে"
+          products={newest.products}
+          href="/shop?sort=newest"
+          displayCount={20}
+        />
       </Reveal>
       <Reveal variant="zoom"><ComboSection combos={combos.combos} /></Reveal>
       <Reveal variant="up">

@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { Search, X, Loader2 } from "lucide-react";
+import { trackEvent } from "@/lib/analytics-tracker";
 
 interface StoreSearchBarProps {
   /** Placeholder text */
@@ -64,6 +65,10 @@ export default function StoreSearchBar({
         params.delete("page");
         const qs = params.toString();
         router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+        if (trimmed) {
+          // Backend dedupes identical events within 5 s, so the debounced typing path is safe.
+          void trackEvent({ eventName: "search", metadata: { query: trimmed } });
+        }
       });
     },
     [syncUrl, isControlled, searchParams, paramName, router, pathname]

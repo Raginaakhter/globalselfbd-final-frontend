@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import type { CartV2 as Cart, Combo } from "@/lib/backend-types";
 import type { StoreProduct } from "@/lib/storefront";
+import { trackEvent } from "@/lib/analytics-tracker";
 
 const LOCAL_KEY = "gsbd-cart-v2";
 const MAX_QTY = 10;
@@ -274,6 +275,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
       }
       if (ok) {
+        void trackEvent({
+          eventName: "add_to_cart",
+          productId: product._id,
+          metadata: { quantity: qty, price: product.finalPrice, size: size ?? undefined },
+        });
         if (!opts.silent) toast.success(`${product.productTitle} added to cart`);
         if (opts.openDrawer !== false) setDrawerOpen(true);
       }
@@ -316,6 +322,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         });
       }
       if (ok) {
+        void trackEvent({
+          eventName: "add_to_cart",
+          metadata: { quantity: qty, price: combo.comboPrice, comboId: combo._id, combo: true },
+        });
         if (!opts.silent) toast.success(`${combo.comboTitle} added to cart`);
         if (opts.openDrawer !== false) setDrawerOpen(true);
       }
@@ -327,15 +337,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const setQty = useCallback<CartContextType["setQty"]>(
     async (key, qty) => {
       if (qty <= 0) {
+        // Snapshot the line before it's removed so we can emit a remove_from_cart event with product details.
+        const line = lines.find((l) => l.key === key);
         if (sourceRef.current === "server") await serverCall(`/cart/${key}`, { method: "DELETE" });
         else updateLocal((cur) => cur.filter((l) => l.key !== key));
+        if (line) {
+          void trackEvent({
+            eventName: "remove_from_cart",
+            productId: line.productId || undefined,
+            metadata: {
+              quantity: line.quantity,
+              price: line.unitPrice,
+              comboId: line.comboId ?? undefined,
+            },
+          });
+        }
         return;
       }
       const quantity = Math.min(qty, MAX_QTY);
       if (sourceRef.current === "server") await serverCall(`/cart/${key}`, { method: "PUT", body: JSON.stringify({ quantity }) });
       else updateLocal((cur) => cur.map((l) => (l.key === key ? { ...l, quantity } : l)));
     },
-    [serverCall, updateLocal]
+    [serverCall, updateLocal, lines]
   );
 
   const removeItem = useCallback((key: string) => setQty(key, 0), [setQty]);

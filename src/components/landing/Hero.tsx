@@ -7,17 +7,48 @@ import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { useSite } from "@/context/SiteContext";
 import { useCategorySidebar } from "@/context/CategorySidebarContext";
 import type { Banner } from "@/lib/backend-types";
+import { trackEvent } from "@/lib/analytics-tracker";
 
 const isExternal = (href: string) => /^https?:\/\//i.test(href);
 
+const fireBannerClick = (banner: Banner) =>
+  void trackEvent({
+    eventName: "banner_click",
+    metadata: {
+      bannerId: banner._id,
+      title: banner.title ?? undefined,
+      href: banner.buttonLink ?? undefined,
+      placement: banner.placement ?? undefined,
+    },
+  });
+
 /** Link that opens external URLs in a new tab. */
-function BannerLink({ href, className, children, label }: { href: string; className: string; children: React.ReactNode; label?: string }) {
+function BannerLink({
+  href,
+  className,
+  children,
+  label,
+  banner,
+}: {
+  href: string;
+  className: string;
+  children: React.ReactNode;
+  label?: string;
+  banner: Banner;
+}) {
   return isExternal(href) ? (
-    <a href={href} target="_blank" rel="noreferrer" className={className} aria-label={label}>
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className={className}
+      aria-label={label}
+      onClick={() => fireBannerClick(banner)}
+    >
       {children}
     </a>
   ) : (
-    <Link href={href} className={className} aria-label={label}>
+    <Link href={href} className={className} aria-label={label} onClick={() => fireBannerClick(banner)}>
       {children}
     </Link>
   );
@@ -38,7 +69,7 @@ function Slide({ banner, eager }: { banner: Banner; eager: boolean }) {
   // Image-only banner: the whole slide is the link (when one is set).
   if (!hasText) {
     return banner.buttonLink ? (
-      <BannerLink href={banner.buttonLink} className="absolute inset-0 block" label={alt}>
+      <BannerLink href={banner.buttonLink} className="absolute inset-0 block" label={alt} banner={banner}>
         {picture}
       </BannerLink>
     ) : (
@@ -60,6 +91,7 @@ function Slide({ banner, eager }: { banner: Banner; eager: boolean }) {
           {banner.buttonLink && (
             <BannerLink
               href={banner.buttonLink}
+              banner={banner}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-navy-700 text-sm font-black shadow-lg hover:bg-sun-400 hover:-translate-y-0.5 transition-all"
             >
               {banner.buttonText || "Shop now"} <ArrowRight className="w-4 h-4" />
@@ -183,7 +215,7 @@ function PromoCard({ banner }: { banner: Banner }) {
   );
 
   return banner.buttonLink ? (
-    <BannerLink href={banner.buttonLink} className={className} label={hasText ? undefined : alt}>
+    <BannerLink href={banner.buttonLink} banner={banner} className={className} label={hasText ? undefined : alt}>
       {body}
     </BannerLink>
   ) : (

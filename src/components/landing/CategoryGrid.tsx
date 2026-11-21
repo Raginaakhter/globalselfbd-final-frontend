@@ -4,6 +4,7 @@ import Link from "next/link";
 import SectionHeading from "./SectionHeading";
 import { useSite } from "@/context/SiteContext";
 import CategoryIcon from "@/components/shop/CategoryIcon";
+import { trackEvent } from "@/lib/analytics-tracker";
 
 export default function CategoryGrid() {
   const { categories } = useSite();
@@ -17,6 +18,12 @@ export default function CategoryGrid() {
           <Link
             key={c._id}
             href={`/shop?category=${c.slug}`}
+            onClick={() =>
+              void trackEvent({
+                eventName: "category_click",
+                metadata: { categoryId: c._id, slug: c.slug, name: c.name },
+              })
+            }
             className="category-tile group flex flex-col items-center text-center rounded-2xl bg-white border border-slate-200 p-3 sm:p-4"
           >
             <CategoryIcon category={c} className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl text-2xl sm:text-3xl mb-3 group-hover:scale-110 transition-transform duration-300" />

@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { StoreProduct } from "@/lib/storefront";
+import { trackEvent } from "@/lib/analytics-tracker";
 
 const KEY = "gsbd-wishlist";
 
@@ -54,6 +55,11 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       // ignore quota / private-mode errors
     }
     setProducts(next);
+    void trackEvent({
+      eventName: exists ? "wishlist_remove" : "wishlist_add",
+      productId: product._id,
+      metadata: { price: product.finalPrice },
+    });
     toast.success(`${product.productTitle} ${exists ? "removed from" : "added to"} wishlist`);
   }, []);
 
