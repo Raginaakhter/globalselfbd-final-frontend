@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   endSession,
+  resumeSession,
   startHeartbeat,
   startSession,
   trackPageView,
@@ -29,11 +30,17 @@ export default function StorefrontAnalytics() {
     const stopHeartbeat = startHeartbeat();
 
     const onPageHide = () => endSession();
+    // Back/forward cache restore: pagehide already ended the session, so reopen it.
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) void resumeSession().then(() => void trackPageView());
+    };
     window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("pageshow", onPageShow);
 
     return () => {
       stopHeartbeat();
       window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("pageshow", onPageShow);
     };
     // Only on first mount — later path/query changes fire their own effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps

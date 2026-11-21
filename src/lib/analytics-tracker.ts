@@ -155,6 +155,16 @@ export async function startSession(): Promise<void> {
   });
 }
 
+/**
+ * Re-open the session after a back-forward cache restore. `pagehide` already sent session/end,
+ * but the page comes back without remounting, so startSession's once-per-load guard must be reset.
+ */
+export async function resumeSession(): Promise<void> {
+  if (!isBrowser()) return;
+  sessionStarted = false;
+  await startSession();
+}
+
 /** Send a page_view event for the current URL. Call on every SPA route change. */
 export async function trackPageView(pageTitle?: string): Promise<void> {
   if (!isBrowser()) return;
