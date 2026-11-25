@@ -829,6 +829,8 @@ export interface Invoice extends Omit<InvoiceListItem, "itemCount"> {
   shippingAddress: string;
   shippingArea: string;
   shippingCity: string;
+  /** STORE_PICKUP invoices carry empty shipping fields. */
+  fulfillmentMethod?: FulfillmentMethod;
   items: InvoiceItem[];
   paidAt: string | null;
   deliveredAt: string | null;

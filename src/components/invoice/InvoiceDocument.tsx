@@ -32,6 +32,9 @@ export default function InvoiceDocument({ invoice: inv, className = "" }: { invo
     address: inv.seller.address || settings.address,
   };
   const refunded = inv.refundAmount > 0;
+  // Pickup orders have no address; older invoices may lack fulfillmentMethod, so an empty address also means pickup.
+  const address = (inv.shippingAddress ?? "").trim();
+  const isPickup = inv.fulfillmentMethod === "STORE_PICKUP" || !address;
 
   return (
     <article className={`mx-auto w-full max-w-4xl rounded-3xl border border-slate-200/80 bg-white p-8 shadow-xs sm:p-10 print:rounded-none print:border-0 print:p-0 print:shadow-none ${className}`}>
@@ -74,14 +77,14 @@ export default function InvoiceDocument({ invoice: inv, className = "" }: { invo
           {inv.customerEmail && <p className="text-sm text-slate-600">{inv.customerEmail}</p>}
         </div>
         <div>
-          <h2 className="mb-2 text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Ship to</h2>
-          {inv.shippingAddress.trim() ? (
+          <h2 className="mb-2 text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">{isPickup ? "Fulfillment" : "Ship to"}</h2>
+          {isPickup ? (
+            <p className="text-sm font-semibold text-slate-700">Store pickup</p>
+          ) : (
             <>
-              <p className="text-sm text-slate-700">{inv.shippingAddress}</p>
+              <p className="text-sm text-slate-700">{address}</p>
               <p className="text-sm text-slate-600">{[inv.shippingArea, inv.shippingCity].filter(Boolean).join(", ")}</p>
             </>
-          ) : (
-            <p className="text-sm font-semibold text-slate-700">Store Pickup</p>
           )}
           <p className="mt-2 text-xs text-slate-500">
             Payment: <span className="font-semibold text-slate-700">{PAYMENT_METHOD_LABELS[inv.paymentMethod] ?? inv.paymentMethod}</span>
@@ -123,7 +126,7 @@ export default function InvoiceDocument({ invoice: inv, className = "" }: { invo
       <dl className="ml-auto w-full max-w-xs space-y-2 border-t border-slate-200 pt-4 text-sm">
         <Row label="Subtotal" value={formatPrice(inv.subtotal)} />
         {inv.discount > 0 && <Row label={inv.couponCode ? `Discount (${inv.couponCode})` : "Discount"} value={`− ${formatPrice(inv.discount)}`} />}
-        <Row label="Delivery charge" value={formatPrice(inv.shippingCost)} />
+        <Row label={isPickup ? "Delivery (Store pickup)" : "Delivery charge"} value={formatPrice(inv.shippingCost)} />
         <Row label="Grand total" value={formatPrice(inv.totalAmount)} strong />
         {refunded && (
           <>
