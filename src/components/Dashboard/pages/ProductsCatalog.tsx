@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { CalendarClock, CirclePlus, Eye, Package, Pencil, Tag, Trash } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import type { Category, Product, ProductDeleteResult, Status } from "@/lib/backend-types";
-import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
+import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS, isPreOrderAllowed } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
 import { errorMessage, qs, useApiAction, useApiQuery } from "../api";
 import { formatBDT } from "../format";
@@ -145,6 +145,7 @@ export default function ProductsCatalog() {
         <select className={selectClass} value={availability} onChange={(e) => reset(setAvailability)(e.target.value)}>
           <option value="">Any stock</option>
           <option value="IN_STOCK">In stock</option>
+          <option value="PRE_ORDER">Pre-order</option>
           <option value="OUT_OF_STOCK">Out of stock</option>
         </select>
         <select className={selectClass} value={preOrderFilter} onChange={(e) => reset(setPreOrderFilter)(e.target.value)} title="Selling type">
@@ -209,14 +210,16 @@ export default function ProductsCatalog() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-col items-start gap-1">
-                        <StatusPill value={p.availability} />
+                        {/* Pre-order products are reported as IN_STOCK; the violet chip below shows their status instead. */}
+                        {!p.isPreOrder && <StatusPill value={p.availability} />}
                         {p.stock != null && (
                           <button
                             disabled={!canStock}
                             onClick={() => setStockFor(p)}
+                            title={p.available != null ? `${p.stock} in stock · ${p.reserved ?? 0} reserved by open orders` : undefined}
                             className={`font-semibold text-slate-600 ${canStock ? "cursor-pointer underline decoration-dotted hover:text-blue-600" : ""}`}
                           >
-                            {p.stock} in stock
+                            {p.available != null ? `${p.available} available` : `${p.stock} in stock`}
                           </button>
                         )}
                         {p.isPreOrder ? (
@@ -227,6 +230,15 @@ export default function ProductsCatalog() {
                             className={`inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2 py-0.5 text-[10px] font-extrabold text-white uppercase ${canUpdate ? "cursor-pointer hover:brightness-110" : ""}`}
                           >
                             <CalendarClock className="h-3 w-3" /> Pre-order · {p.preOrderMinDays ?? 0}d
+                          </button>
+                        ) : isPreOrderAllowed(p) ? (
+                          <button
+                            disabled={!canUpdate}
+                            onClick={() => setPreOrderFor(p)}
+                            title="Pre-order is on for this product; it switches to pre-order automatically when it sells out"
+                            className={`text-[11px] font-semibold text-violet-600 ${canUpdate ? "cursor-pointer hover:underline" : ""}`}
+                          >
+                            Pre-order when sold out · {p.preOrderMinDays ?? 0}d
                           </button>
                         ) : (
                           canUpdate && (
@@ -294,8 +306,11 @@ export default function ProductsCatalog() {
 /** Quick pre-order switch, separate from the full product edit (PATCH /products/:id/pre-order). */
 function PreOrderModal({ product, onClose, onSaved }: { product: Product; onClose: () => void; onSaved: (p: Product) => void }) {
   const action = useApiAction();
-  const [enabled, setEnabled] = useState(product.isPreOrder ?? false);
-  const [days, setDays] = useState(String(product.isPreOrder && product.preOrderMinDays ? product.preOrderMinDays : PRE_ORDER_MIN_DAYS));
+  // The switch means "pre-order allowed"; the backend decides from stock whether it is in pre-order mode now.
+  const allowed = isPreOrderAllowed(product);
+  const [enabled, setEnabled] = useState(allowed);
+  const initialDays = String(product.preOrderMinDays && product.preOrderMinDays >= PRE_ORDER_MIN_DAYS ? product.preOrderMinDays : PRE_ORDER_MIN_DAYS);
+  const [days, setDays] = useState(initialDays);
   const [saving, setSaving] = useState(false);
   const n = Number(days);
   const validDays = Number.isInteger(n) && n >= PRE_ORDER_MIN_DAYS && n <= PRE_ORDER_MAX_DAYS;
@@ -304,6 +319,9 @@ function PreOrderModal({ product, onClose, onSaved }: { product: Product; onClos
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid) return;
+    // Nothing changed: an untouched "off" would explicitly block pre-order (opting out of the site-wide
+    // auto rule), and an untouched "on" would turn a site-rule (AUTO) product into an admin (MANUAL) one.
+    if (enabled === allowed && (!enabled || days === initialDays)) return onClose();
     setSaving(true);
     const res = await action<Product>(`/products/${product._id}/pre-order`, {
       method: "PATCH",
@@ -327,8 +345,10 @@ function PreOrderModal({ product, onClose, onSaved }: { product: Product; onClos
         </div>
         <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-3">
           <span className="text-sm font-bold text-slate-800">
-            Sell as pre-order
-            <span className="block text-[11px] font-medium text-slate-500">No stock needed; stock is not deducted.</span>
+            Allow pre-order
+            <span className="block text-[11px] font-medium text-slate-500">
+              Sells as pre-order automatically while out of stock, and as a regular product once stock arrives.
+            </span>
           </span>
           <Toggle checked={enabled} onChange={setEnabled} color="peer-checked:bg-violet-600" size="md" />
         </label>
@@ -341,7 +361,9 @@ function PreOrderModal({ product, onClose, onSaved }: { product: Product; onClos
             {!validDays && <span className="text-xs font-semibold text-rose-500">Must be a whole number between {PRE_ORDER_MIN_DAYS} and {PRE_ORDER_MAX_DAYS}.</span>}
           </label>
         )}
-        {!enabled && product.isPreOrder && <p className="text-xs text-amber-600">Turning pre-order off resets the delivery days to 0. Existing orders keep their own dates.</p>}
+        {!enabled && allowed && (
+          <p className="text-xs text-amber-600">Turning pre-order off shows this product as Out of Stock whenever it runs out. Existing orders keep their own dates.</p>
+        )}
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="cursor-pointer rounded-xl px-4 text-sm font-semibold text-slate-500 hover:bg-slate-100">
             Cancel

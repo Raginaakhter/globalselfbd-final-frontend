@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import type { AdminOrderListItem, Category, Product, ProductDeleteResult, Status } from "@/lib/backend-types";
-import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
+import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS, isPreOrderAllowed } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
 import { errorMessage, qs, useApiAction, useApiQuery, type Pagination } from "../api";
 import { formatBDT } from "../format";
@@ -338,7 +338,7 @@ function PreOrderProductsSection() {
                           <span>{p.preOrderMinDays ?? PRE_ORDER_MIN_DAYS} Days Delivery</span>
                           {canUpdate && <Pencil className="h-2.5 w-2.5 ml-0.5 opacity-80" />}
                         </button>
-                        <span className="text-[10px] font-medium text-slate-400">No stock deducted</span>
+                        <span className="text-[10px] font-medium text-slate-400">Becomes in stock when stock arrives</span>
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -425,10 +425,13 @@ function QuickPreOrderProductModal({
   onSaved: (p: Product) => void;
 }) {
   const action = useApiAction();
-  const [enabled, setEnabled] = useState(product.isPreOrder ?? true);
-  const [days, setDays] = useState(
-    String(product.isPreOrder && product.preOrderMinDays ? product.preOrderMinDays : PRE_ORDER_MIN_DAYS)
+  // The switch means "pre-order allowed"; the backend decides from stock whether it is in pre-order mode now.
+  const allowed = isPreOrderAllowed(product);
+  const initialDays = String(
+    product.preOrderMinDays && product.preOrderMinDays >= PRE_ORDER_MIN_DAYS ? product.preOrderMinDays : PRE_ORDER_MIN_DAYS
   );
+  const [enabled, setEnabled] = useState(allowed);
+  const [days, setDays] = useState(initialDays);
   const [saving, setSaving] = useState(false);
   const n = Number(days);
   const validDays = Number.isInteger(n) && n >= PRE_ORDER_MIN_DAYS && n <= PRE_ORDER_MAX_DAYS;
@@ -437,6 +440,9 @@ function QuickPreOrderProductModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid) return;
+    // Nothing changed: don't turn a site-rule (AUTO) pre-order into an admin (MANUAL) one, or an
+    // untouched "off" into an explicit opt-out.
+    if (enabled === allowed && (!enabled || days === initialDays)) return onClose();
     setSaving(true);
     const res = await action<Product>(`/products/${product._id}/pre-order`, {
       method: "PATCH",
@@ -461,9 +467,9 @@ function QuickPreOrderProductModal({
 
         <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 p-3">
           <span className="text-sm font-bold text-slate-800">
-            Sell as Pre-Order
+            Allow Pre-Order
             <span className="block text-[11px] font-medium text-slate-500">
-              No stock needed; stock is not deducted on purchase.
+              Sells as pre-order while out of stock. When stock arrives, waiting pre-orders are served first, then it sells as a regular product. Off = Out of Stock when it runs out.
             </span>
           </span>
           <Toggle checked={enabled} onChange={setEnabled} color="peer-checked:bg-violet-600" size="md" />

@@ -172,7 +172,7 @@ function PreOrderSettingsForm({ initial, onSaved }: { initial: PreOrderSettings;
           <span className="flex flex-col gap-1">
             <span className="text-sm font-bold text-slate-800">Auto-enable pre-order when stock runs out</span>
             <span className="text-[11px] font-medium text-slate-500">
-              When on, a product auto-flips to Pre-Order the moment its stock reaches 0 and reverts back when restocked. Products you toggled manually stay locked.
+              When on, a product switches to Pre-Order the moment nothing is left to sell, and back to In Stock when stock arrives (waiting pre-orders are served first). Products where you turned pre-order on or off yourself follow their own setting. Changing this updates all products right away.
             </span>
           </span>
           <Toggle

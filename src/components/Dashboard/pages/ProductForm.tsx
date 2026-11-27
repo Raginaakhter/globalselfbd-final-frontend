@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarClock, Truck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import type { Product, ProductOptions } from "@/lib/backend-types";
-import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS } from "@/lib/backend-types";
+import { PRE_ORDER_MAX_DAYS, PRE_ORDER_MIN_DAYS, isPreOrderAllowed } from "@/lib/backend-types";
 import { BASE } from "../AppSidebar";
 import { useApiAction, useApiQuery } from "../api";
 import { ErrorBox, FieldError, PrimaryButton, Spinner, Toggle, inputClass, labelClass } from "../ui";
@@ -35,7 +35,8 @@ interface FormState {
   freeDelivery: boolean;
 }
 
-const toForm = (p?: Product | null): FormState => ({
+// New products follow the site-wide pre-order rule until the admin decides otherwise.
+const toForm = (p?: Product | null, preOrder?: ProductOptions["preOrder"]): FormState => ({
   productTitle: p?.productTitle ?? "",
   slug: p?.slug ?? "",
   productDescription: p?.productDescription ?? "",
@@ -51,8 +52,13 @@ const toForm = (p?: Product | null): FormState => ({
   thumbnail: p?.thumbnail ?? "",
   gallery: p?.gallery ?? [],
   status: p?.status ?? "ACTIVE",
-  isPreOrder: p?.isPreOrder ?? false,
-  preOrderMinDays: p?.isPreOrder && p.preOrderMinDays ? String(p.preOrderMinDays) : String(PRE_ORDER_MIN_DAYS),
+  // The switch means "pre-order allowed"; the backend decides from stock whether it is in pre-order mode now.
+  isPreOrder: p ? isPreOrderAllowed(p) : (preOrder?.autoEnableOnStockOut ?? false),
+  // Days are kept while an allowed product is temporarily in stock, so show them whenever they are valid.
+  preOrderMinDays:
+    p?.preOrderMinDays && p.preOrderMinDays >= PRE_ORDER_MIN_DAYS
+      ? String(p.preOrderMinDays)
+      : String(Math.max(preOrder?.defaultPreOrderDays ?? PRE_ORDER_MIN_DAYS, PRE_ORDER_MIN_DAYS)),
   freeDelivery: p?.freeDelivery ?? false,
 });
 
@@ -70,7 +76,7 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
   const router = useRouter();
   const { hasPermission } = useAuth();
   const action = useApiAction();
-  const [form, setForm] = useState<FormState>(() => toForm(product));
+  const [form, setForm] = useState<FormState>(() => toForm(product, options.preOrder));
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [saving, setSaving] = useState(false);
 
@@ -126,12 +132,18 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
       thumbnail: form.thumbnail,
       gallery: form.gallery,
       status: form.status,
-      isPreOrder: form.isPreOrder,
-      // Backend resets days to 0 when pre-order is off; send it explicitly to keep things in sync
-      preOrderMinDays: form.isPreOrder ? Number(form.preOrderMinDays) : 0,
       // Backend clamps to false silently when the product is discounted — safe to send either way.
       freeDelivery: form.freeDelivery,
     };
+    // Send the pre-order switch only when the admin changed it. "Off" tells the backend to block
+    // pre-order for this product, so re-sending an untouched "off" would opt every edited product
+    // out of the site-wide auto pre-order rule.
+    const initial = toForm(product, options.preOrder);
+    const preOrderChanged = form.isPreOrder !== initial.isPreOrder;
+    if (preOrderChanged || (form.isPreOrder && form.preOrderMinDays !== initial.preOrderMinDays)) {
+      body.isPreOrder = form.isPreOrder;
+      if (form.isPreOrder) body.preOrderMinDays = Number(form.preOrderMinDays);
+    }
     if (form.slug.trim()) body.slug = form.slug.trim();
     if (form.productCost.trim()) body.productCost = Number(form.productCost);
     if (canEditStock) body.stock = Number(form.stock);
@@ -269,7 +281,9 @@ function ProductFormInner({ product, options }: { product: Product | null; optio
               <Toggle checked={form.isPreOrder} onChange={(v) => set("isPreOrder", v)} color="peer-checked:bg-violet-600" />
             </div>
             <p className="text-xs text-slate-500">
-              When on, the product sells with no stock requirement and stock is not deducted. Customers see a Pre-Order badge and an expected delivery date.
+              When on, the product switches to pre-order automatically whenever it is out of stock (customers see a Pre-Order badge and an expected delivery date), and back to a regular product as soon as stock arrives.
+              {product?.isPreOrder ? " It is in pre-order mode right now." : product && form.isPreOrder ? " It is in stock right now, so it sells normally." : ""}
+              {!product && options.preOrder?.autoEnableOnStockOut ? " On by default because the site-wide auto pre-order setting is on." : ""}
             </p>
             {form.isPreOrder &&
               field(

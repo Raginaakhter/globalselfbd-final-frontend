@@ -210,7 +210,7 @@ function PreOrderChip({ source }: { source: PreOrderSource | null }) {
     return (
       <div
         className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-violet-700"
-        title="Backend auto-flipped this product to pre-order because stock hit 0."
+        title="The site-wide auto rule switched this product to pre-order because nothing is left to sell."
       >
         Pre-order · Auto
       </div>
@@ -220,7 +220,7 @@ function PreOrderChip({ source }: { source: PreOrderSource | null }) {
     return (
       <div
         className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-fuchsia-200 bg-fuchsia-50 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-fuchsia-700"
-        title="Admin marked this product as pre-order — never auto-reverted on restock."
+        title="Admin turned pre-order on for this product: it sells as pre-order while out of stock and as a regular product once restocked."
       >
         Pre-order · Manual
       </div>

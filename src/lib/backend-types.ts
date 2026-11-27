@@ -40,10 +40,20 @@ export interface Product {
   gallery: string[];
   availability: "IN_STOCK" | "OUT_OF_STOCK";
   status: Status;
-  /** Sells without a stock requirement; always reported as IN_STOCK. */
+  /**
+   * Pre-order mode right now (backend-managed from available stock): sells without a stock
+   * requirement and is reported as IN_STOCK. A product that allows pre-order flips back to a
+   * regular product when stock arrives, and back to pre-order when it sells out.
+   */
   isPreOrder?: boolean;
-  /** Promised fulfilment window in days (≥ 15 when isPreOrder, 0 otherwise). */
+  /** Promised fulfilment window in days (≥ 15 when pre-order is allowed). */
   preOrderMinDays?: number;
+  /** Three-state status for badges and buttons (newer backends; computed from available stock). */
+  availabilityStatus?: "IN_STOCK" | "PRE_ORDER" | "OUT_OF_STOCK";
+  /** products.update only: the product's pre-order policy (see PreOrderSource). */
+  preOrderSource?: PreOrderSource | null;
+  /** products.update only: may this product sell as pre-order when it runs out (the admin switch's state). */
+  preOrderEnabled?: boolean;
   /**
    * Ships at no shipping cost when every billable line in the cart is a product with this flag true.
    * Backend clamps to false when customerSpecialPrice is set (discounted products always pay shipping).
@@ -51,6 +61,10 @@ export interface Product {
   freeDelivery?: boolean;
   /** Staff with inventory.view only */
   stock?: number;
+  /** Staff with inventory.view only: units held by placed, undelivered orders */
+  reserved?: number;
+  /** Staff with inventory.view only: stock - reserved, what customers can buy now */
+  available?: number;
   /** Staff with products.update only */
   productCost?: number;
   /** From APPROVED reviews only */
@@ -63,6 +77,8 @@ export interface ProductOptions {
   categories: { _id: string; name: string; slug: string; path: string }[];
   sizes: string[];
   units: string[];
+  /** Site-wide pre-order settings (newer backends). */
+  preOrder?: { autoEnableOnStockOut: boolean; defaultPreOrderDays: number; minDeliveryDays: number; maxDeliveryDays: number };
 }
 
 /** DELETE /products/:id — always 200; products used in any order are deactivated instead of removed. */
@@ -1159,8 +1175,19 @@ export interface InventorySummary {
   suppliers: { active: number };
 }
 
-/** How a product became isPreOrder: MANUAL = admin toggled it; AUTO = backend auto-flipped on stock-out; NONE = not a pre-order. */
-export type PreOrderSource = "MANUAL" | "AUTO" | "NONE";
+/**
+ * A product's pre-order policy: MANUAL = admin allowed pre-order (pre-order whenever it is out of stock);
+ * AUTO = the site-wide auto rule put it in pre-order; DISABLED = admin turned pre-order off (Out of Stock at 0);
+ * NONE / null = no product-level choice (follows the site-wide setting).
+ */
+export type PreOrderSource = "MANUAL" | "AUTO" | "DISABLED" | "NONE";
+
+/**
+ * Whether the admin's pre-order switch for this product reads as "on" (may sell as pre-order when
+ * out of stock), regardless of current stock. Uses the backend's exact preOrderEnabled when sent.
+ */
+export const isPreOrderAllowed = (p: Pick<Product, "isPreOrder" | "preOrderSource" | "preOrderEnabled">): boolean =>
+  p.preOrderEnabled ?? (!!p.isPreOrder || p.preOrderSource === "MANUAL");
 
 export interface InventoryRow {
   _id: string;
