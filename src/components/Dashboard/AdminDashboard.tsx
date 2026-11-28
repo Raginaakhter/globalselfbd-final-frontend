@@ -45,7 +45,7 @@ function DashboardBody({ lastUpdated, onRefresh }: { lastUpdated: Date | null; o
 
   const counts: (StatDef & { count: ReturnType<typeof useCount> })[] = [
     { title: "Total Orders", icon: ShoppingBag, colorBg: "bg-blue-50", textColor: "text-blue-600", link: `${BASE}/orders`, count: useCount(o({}), true), show: canOrders },
-    { title: "Pre-Orders", icon: CalendarClock, colorBg: "bg-purple-50", textColor: "text-purple-600", link: `${BASE}/pre-orders`, count: useCount(o({ type: "preOrder" }), true), show: canOrders },
+    { title: "Pre-Orders", icon: CalendarClock, colorBg: "bg-purple-50", textColor: "text-purple-600", link: `${BASE}/pre-orders`, count: useCount(o({ type: "preOrder", active: "true" }), true), show: canOrders },
     { title: "Today's Orders", icon: Clock, colorBg: "bg-sky-50", textColor: "text-sky-600", link: `${BASE}/orders`, count: useCount(o(today), true), show: canOrders },
     { title: "Pending", icon: Clock, colorBg: "bg-amber-50", textColor: "text-amber-600", link: `${BASE}/orders`, count: useCount(o({ status: "PENDING" }), true), show: canOrders },
     { title: "Shipped", icon: Truck, colorBg: "bg-violet-50", textColor: "text-violet-600", link: `${BASE}/orders`, count: useCount(o({ status: "SHIPPED" }), true), show: canOrders },

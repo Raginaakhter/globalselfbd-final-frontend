@@ -55,20 +55,31 @@ export interface OrderFilters {
 
 export const EMPTY_FILTERS: OrderFilters = { search: "", status: "", paymentStatus: "", type: "", fromDate: "", toDate: "" };
 
+/** Status-filter value meaning "not delivered or cancelled yet"; sent to the backend as active=true. */
+export const OPEN_STATUS_FILTER = "OPEN";
+
+/** Maps the filter state to /admin/orders query params (turns OPEN_STATUS_FILTER into active=true). */
+export const orderQueryParams = (f: OrderFilters) =>
+  f.status === OPEN_STATUS_FILTER ? { ...f, status: "", active: "true" } : f;
+
 export function OrderFilterBar({
   value,
   onChange,
   hideTypeFilter = false,
+  showOpenOption = false,
 }: {
   value: OrderFilters;
   onChange: (f: OrderFilters) => void;
   hideTypeFilter?: boolean;
+  /** Adds an "Open" status option (excludes delivered and cancelled); pair with orderQueryParams. */
+  showOpenOption?: boolean;
 }) {
   const set = (k: keyof OrderFilters) => (v: string) => onChange({ ...value, [k]: v });
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
       <SearchBox value={value.search} onChange={set("search")} placeholder="Order number, name, phone or email..." />
       <select className={selectClass} value={value.status} onChange={(e) => set("status")(e.target.value)}>
+        {showOpenOption && <option value={OPEN_STATUS_FILTER}>Open (not delivered / cancelled)</option>}
         <option value="">All order statuses</option>
         {ORDER_STATUSES.map((s) => (
           <option key={s} value={s}>

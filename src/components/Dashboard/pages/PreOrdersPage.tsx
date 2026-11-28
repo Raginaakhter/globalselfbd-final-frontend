@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
+  BadgeCheck,
   CalendarClock,
   Clock,
   CheckCircle2,
-  Truck,
-  Boxes,
-  Bike,
+  CircleX,
+  ListOrdered,
   Package,
   PackageX,
   Plus,
@@ -42,7 +43,15 @@ import {
   useConfirm,
   useDebounced,
 } from "../ui";
-import { OrderFilterBar, OrdersTable, useOrderFilters } from "./orderShared";
+import {
+  EMPTY_FILTERS,
+  OPEN_STATUS_FILTER,
+  ORDER_STATUSES,
+  OrderFilterBar,
+  OrdersTable,
+  orderQueryParams,
+  useOrderFilters,
+} from "./orderShared";
 import { ProductThumb } from "./ProductsCatalog";
 
 type OrdersResponse = { orders: AdminOrderListItem[]; pagination: Pagination };
@@ -95,83 +104,63 @@ export default function PreOrdersPage() {
         </button>
       </div>
 
-      {activeTab === "orders" ? <PreOrderOrdersSection /> : <PreOrderProductsSection />}
+      {activeTab === "orders" ? (
+        <Suspense fallback={<Spinner label="Loading pre-orders..." />}>
+          <PreOrderOrdersRoute />
+        </Suspense>
+      ) : (
+        <PreOrderProductsSection />
+      )}
     </div>
   );
 }
 
-function PreOrderOrdersSection() {
-  const { filters, setFilters, page, setPage } = useOrderFilters({ type: "preOrder" });
+/** Pre-order count for one status filter (OPEN = not delivered/cancelled, "" = all). */
+function usePreOrderCount(status: string) {
+  const res = useApiQuery<OrdersResponse>(
+    `/admin/orders${qs({ ...orderQueryParams({ ...EMPTY_FILTERS, status }), type: "preOrder", limit: 1 })}`
+  );
+  const total = res.data?.pagination.total;
+  return res.error ? "!" : total == null ? "…" : total.toLocaleString("en-US");
+}
+
+/** Reads ?status= so the stat cards (and the dashboard) can deep-link; remounts the list when it changes. */
+function PreOrderOrdersRoute() {
+  const sp = useSearchParams();
+  const raw = sp?.get("status") ?? OPEN_STATUS_FILTER;
+  const status = raw === "ALL" ? "" : raw === OPEN_STATUS_FILTER || (ORDER_STATUSES as string[]).includes(raw) ? raw : OPEN_STATUS_FILTER;
+  return <PreOrderOrdersSection key={status} initialStatus={status} />;
+}
+
+function PreOrderOrdersSection({ initialStatus }: { initialStatus: string }) {
+  // Opens on "Open" pre-orders by default: a delivered or cancelled pre-order no longer needs action here.
+  const { filters, setFilters, page, setPage } = useOrderFilters({ type: "preOrder", status: initialStatus });
   const search = useDebounced(filters.search);
 
   // Always filters to type=preOrder on this page
   const orders = useApiQuery<OrdersResponse>(
-    `/admin/orders${qs({ ...filters, type: "preOrder", search, page, limit: 20 })}`
+    `/admin/orders${qs({ ...orderQueryParams(filters), type: "preOrder", search, page, limit: 20 })}`
   );
 
-  // Stat counters for pre-orders
-  const totalCount = useApiQuery<OrdersResponse>(`/admin/orders${qs({ type: "preOrder", limit: 1 })}`);
-  const pendingCount = useApiQuery<OrdersResponse>(`/admin/orders${qs({ type: "preOrder", status: "PENDING", limit: 1 })}`);
-  const processingCount = useApiQuery<OrdersResponse>(`/admin/orders${qs({ type: "preOrder", status: "PROCESSING", limit: 1 })}`);
-  const readyCount = useApiQuery<OrdersResponse>(`/admin/orders${qs({ type: "preOrder", status: "READY_TO_SHIP", limit: 1 })}`);
-  const shippedCount = useApiQuery<OrdersResponse>(`/admin/orders${qs({ type: "preOrder", status: "SHIPPED", limit: 1 })}`);
-  const deliveredCount = useApiQuery<OrdersResponse>(`/admin/orders${qs({ type: "preOrder", status: "DELIVERED", limit: 1 })}`);
+  const cards = [
+    { title: "Open Pre-Orders", status: OPEN_STATUS_FILTER, icon: CalendarClock, colorBg: "bg-purple-50", textColor: "text-purple-600", count: usePreOrderCount(OPEN_STATUS_FILTER) },
+    { title: "Pending", status: "PENDING", icon: Clock, colorBg: "bg-amber-50", textColor: "text-amber-600", count: usePreOrderCount("PENDING") },
+    { title: "Confirmed", status: "CONFIRMED", icon: BadgeCheck, colorBg: "bg-indigo-50", textColor: "text-indigo-600", count: usePreOrderCount("CONFIRMED") },
+    { title: "Delivered", status: "DELIVERED", icon: CheckCircle2, colorBg: "bg-emerald-50", textColor: "text-emerald-600", count: usePreOrderCount("DELIVERED") },
+    { title: "Cancelled", status: "CANCELLED", icon: CircleX, colorBg: "bg-rose-50", textColor: "text-rose-600", count: usePreOrderCount("CANCELLED") },
+    { title: "All Pre-Orders", status: "ALL", icon: ListOrdered, colorBg: "bg-slate-100", textColor: "text-slate-600", count: usePreOrderCount("") },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
       {/* KPI Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard
-          title="Total Pre-Orders"
-          value={totalCount.data?.pagination.total != null ? totalCount.data.pagination.total.toLocaleString() : "…"}
-          icon={CalendarClock}
-          colorBg="bg-purple-50"
-          textColor="text-purple-600"
-          link={`${BASE}/pre-orders`}
-        />
-        <StatCard
-          title="Pending"
-          value={pendingCount.data?.pagination.total != null ? pendingCount.data.pagination.total.toLocaleString() : "…"}
-          icon={Clock}
-          colorBg="bg-amber-50"
-          textColor="text-amber-600"
-          link={`${BASE}/pre-orders?status=PENDING`}
-        />
-        <StatCard
-          title="Processing"
-          value={processingCount.data?.pagination.total != null ? processingCount.data.pagination.total.toLocaleString() : "…"}
-          icon={Boxes}
-          colorBg="bg-indigo-50"
-          textColor="text-indigo-600"
-          link={`${BASE}/pre-orders?status=PROCESSING`}
-        />
-        <StatCard
-          title="Ready to Ship"
-          value={readyCount.data?.pagination.total != null ? readyCount.data.pagination.total.toLocaleString() : "…"}
-          icon={Truck}
-          colorBg="bg-cyan-50"
-          textColor="text-cyan-600"
-          link={`${BASE}/pre-orders?status=READY_TO_SHIP`}
-        />
-        <StatCard
-          title="Shipped"
-          value={shippedCount.data?.pagination.total != null ? shippedCount.data.pagination.total.toLocaleString() : "…"}
-          icon={Bike}
-          colorBg="bg-violet-50"
-          textColor="text-violet-600"
-          link={`${BASE}/pre-orders?status=SHIPPED`}
-        />
-        <StatCard
-          title="Delivered"
-          value={deliveredCount.data?.pagination.total != null ? deliveredCount.data.pagination.total.toLocaleString() : "…"}
-          icon={CheckCircle2}
-          colorBg="bg-emerald-50"
-          textColor="text-emerald-600"
-          link={`${BASE}/pre-orders?status=DELIVERED`}
-        />
+        {cards.map(({ status, count, ...c }) => (
+          <StatCard key={c.title} {...c} value={count} link={`${BASE}/pre-orders?status=${status}`} />
+        ))}
       </div>
 
-      <OrderFilterBar value={filters} onChange={setFilters} hideTypeFilter />
+      <OrderFilterBar value={filters} onChange={setFilters} hideTypeFilter showOpenOption />
 
       <OrdersTable
         orders={orders.data?.orders}
